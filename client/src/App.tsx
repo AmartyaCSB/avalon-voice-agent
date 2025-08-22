@@ -21,7 +21,10 @@ export default function App() {
   const [narration, setNarration] = useState<{steps:string[], notes:string[]} | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const synthRef = useRef(window.speechSynthesis);
-
+  const [rate, setRate] = useState(0.95);         // 0.6x .. 1.4x
+  const [repeat, setRepeat] = useState(1);        // 1, 2, 3 times
+  const audioRef = useRef<HTMLAudioElement | null>(null); // for server TTS stop()
+  const ttsCache = useRef<Map<string, Blob>>(new Map());  // cache server mp3 per line
   useEffect(() => { synthRef.current?.cancel(); setSpeaking(false); }, []);
 
   async function handleAssign() {
@@ -35,38 +38,76 @@ export default function App() {
   }
 
   async function speakNarration() {
-    if (!narration) return;
-    setSpeaking(true);
-    if (ttsEnabledServerSide()) {
-      // server TTS: combine lines and play as single mp3
-      const blob = await ttsMp3Blob(narration.steps.join(" "));
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.onended = () => setSpeaking(false);
-      await audio.play();
-    } else {
-      // Browser TTS line-by-line
-      for (const line of narration.steps) {
-        if (!speaking) break;
-        await speak(line);
-      }
-      setSpeaking(false);
-    }
-  }
+  if (!narration) return;
+  setSpeaking(true);
 
-  function speak(text: string) {
-    return new Promise<void>((resolve) => {
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = 0.95;
-      utter.onend = () => resolve();
-      synthRef.current?.speak(utter);
-    });
+  const gapBetweenLinesMs = 550;      // pause between different lines
+  const gapBetweenRepeatsMs = 350;    // short pause between repeats of the same line
+
+  const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+  try {
+    if (ttsEnabledServerSide()) {
+      // Per-line server TTS so we can repeat lines.
+      for (const line of narration.steps) {
+        for (let i = 0; i < repeat; i++) {
+          if (!speaking) return;
+          let blob = ttsCache.current.get(line);
+          if (!blob) {
+            blob = await ttsMp3Blob(line);
+            ttsCache.current.set(line, blob);
+          }
+          const url = URL.createObjectURL(blob);
+          await new Promise<void>((resolve, reject) => {
+            const audio = new Audio(url);
+            audioRef.current = audio;
+            audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+            audio.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+            audio.play();
+          });
+          if (i < repeat - 1) await delay(gapBetweenRepeatsMs);
+        }
+        await delay(gapBetweenLinesMs);
+      }
+    } else {
+      // Browser TTS (rate supported)
+      for (const line of narration.steps) {
+        for (let i = 0; i < repeat; i++) {
+          if (!speaking) return;
+          await speak(line, rate);
+          if (i < repeat - 1) await delay(gapBetweenRepeatsMs);
+        }
+        await delay(gapBetweenLinesMs);
+      }
+    }
+  } finally {
+    setSpeaking(false);
   }
+}
+
+
+  function speak(text: string, r: number) {
+  return new Promise<void>((resolve) => {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = r;              // <- use selected speed
+    utter.pitch = 1.0;
+    utter.onend = () => resolve();
+    synthRef.current?.speak(utter);
+  });
+}
+
 
   function stop() {
-    setSpeaking(false);
-    synthRef.current?.cancel();
+  setSpeaking(false);
+  // Browser TTS
+  synthRef.current?.cancel();
+  // Server TTS
+  if (audioRef.current) {
+    try { audioRef.current.pause(); audioRef.current.src = ""; } catch {}
+    audioRef.current = null;
   }
+}
+
 
   return (
     <div className="wrap">
@@ -76,6 +117,29 @@ export default function App() {
       <div className="grid">
         {/* LEFT: Controls */}
         <div className="panel">
+          <div className="row" style={{ alignItems:'center' }}>
+            <label style={{ minWidth:130 }}>Narration speed</label>
+            <input
+              type="range"
+              min={0.6}
+              max={1.4}
+              step={0.05}
+              value={rate}
+              onChange={e => setRate(parseFloat(e.target.value))}
+              style={{ flex:1 }}
+            />
+            <span style={{ width:56, textAlign:'right' }}>{rate.toFixed(2)}×</span>
+          </div>
+
+          <div className="row">
+            <label style={{ minWidth:130 }}>Repeat each line</label>
+            <select value={repeat} onChange={e => setRepeat(parseInt(e.target.value, 10))}>
+              <option value={1}>Once</option>
+              <option value={2}>Twice</option>
+              <option value={3}>Thrice</option>
+            </select>
+          </div>
+
           <div className="row">
             <label>Players (5–10)</label>
             <input type="number" min={5} max={10} value={players}
