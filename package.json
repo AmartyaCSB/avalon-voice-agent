@@ -1,0 +1,13 @@
+{
+  "name": "avalon-voice-agent-monorepo",
+  "private": true,
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "concurrently -k -n SERVER,CLIENT -c blue,green \"npm:dev --workspace server\" \"npm:dev --workspace client\"",
+    "build": "npm run build --workspace client",
+    "deploy:web": "npm run deploy --workspace client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
