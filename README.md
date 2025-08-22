@@ -1,9 +1,5 @@
 # Avalon Big Box — Quick Rulebook
 
-> This is a concise, newcomer‑friendly rulebook you can paste on your site. It covers **Base Avalon** plus **Big Box** characters and modules your app supports. It’s written to match the reveal script and options in the app.
-
----
-
 ## 1) Objective
 
 **Good (Loyal Servants of Arthur)** win by completing **3 Quests**. **Evil (Minions of Mordred)** win by causing **3 failed Quests**, **5 consecutive rejected Teams**, or by **assassinating Merlin** after Good completes 3 Quests.
