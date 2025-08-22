@@ -272,3 +272,30 @@ export function validateConfiguration(players: number, o: RolesToggle) {
     }
   };
 }
+
+export function isAdvanced(o: RolesToggle) {
+  return (
+    o.LancelotMode !== "off" ||
+    o.Cleric || o.LadyOfTheLake ||
+    o.MessengerJunior || o.MessengerSenior || o.MessengerEvil ||
+    o.RogueGood || o.RogueEvil ||
+    o.SorcererGood || o.SorcererEvil ||
+    o.Troublemaker || o.UntrustworthyServant || o.Apprentice ||
+    o.Lunatic || o.Brute || o.Revealer || o.Trickster
+  );
+}
+
+export function teamCountsSafe(players: number) {
+  try { return teamCounts(players); }
+  catch { return { good: 0, evil: 0 }; }
+}
+
+/** One-line summary used under the Narration title */
+export function buildSummary(players: number, o: RolesToggle) {
+  const { good, evil } = teamCountsSafe(players);
+  const { goodNames, evilNames } = selectedRoleCounts(o);
+  const goodList = goodNames.length ? goodNames.join(", ") : "None";
+  const evilList = evilNames.length ? evilNames.join(", ") : "None";
+
+  return `Players: ${players} · Seats → Good ${good}, Evil ${evil}.  Good roles: ${goodList}.  Evil roles: ${evilList}.`;
+}
