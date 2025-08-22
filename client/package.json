@@ -1,1 +1,23 @@
-{"name":"avalon-client","private":true,"type":"module","scripts":{"build":"vite build","deploy-bigbox":"gh-pages -d dist -b bigbox"},"dependencies":{"react":"^18.2.0","react-dom":"^18.2.0"},"devDependencies":{"@vitejs/plugin-react-swc":"^3.5.0","gh-pages":"^6.3.0","typescript":"^5.4.5","vite":"^5.0.0"}}
+{
+  "name": "avalon-voice-agent-client",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && copy /y dist\\index.html dist\\404.html",
+    "deploy": "gh-pages -d dist -b gh-pages -f"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.10",
+    "@types/react-dom": "^18.3.0",
+    "gh-pages": "^6.2.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0",
+    "@vitejs/plugin-react": "^4.3.1"
+  }
+}
