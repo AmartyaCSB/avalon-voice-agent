@@ -177,3 +177,98 @@ export function buildNarration(o: RolesToggle, _players: number) {
 
   return { steps, notes };
 }
+export function selectedRoleCounts(o: RolesToggle) {
+  const goodNames: string[] = [];
+  const evilNames: string[] = [];
+
+  // Always in game
+  evilNames.push('Assassin');
+
+  // Base / toggles
+  if (o.Merlin) goodNames.push('Merlin');
+  if (o.Percival) goodNames.push('Percival');
+  if (o.Mordred) evilNames.push('Mordred');
+  if (o.Morgana) evilNames.push('Morgana');
+  if (o.Oberon) evilNames.push('Oberon');
+
+  // Lancelots
+  if (o.LancelotMode !== 'off') {
+    goodNames.push('Good Lancelot');
+    evilNames.push('Evil Lancelot');
+  }
+
+  // Messengers
+  if (o.MessengerJunior) goodNames.push('Junior Messenger');
+  if (o.MessengerSenior) goodNames.push('Senior Messenger');
+  if (o.MessengerEvil)   evilNames.push('Evil Messenger');
+
+  // Rogues
+  if (o.RogueGood) goodNames.push('Good Rogue');
+  if (o.RogueEvil) evilNames.push('Evil Rogue');
+
+  // Sorcerers
+  if (o.SorcererGood) goodNames.push('Good Sorcerer');
+  if (o.SorcererEvil) evilNames.push('Evil Sorcerer');
+
+  // Good extras
+  if (o.Cleric) goodNames.push('Cleric');
+  if (o.Troublemaker) goodNames.push('Troublemaker');
+  if (o.UntrustworthyServant) goodNames.push('Untrustworthy Servant');
+  if (o.Apprentice) goodNames.push('Apprentice');
+
+  // Evil extras
+  if (o.Lunatic) evilNames.push('Lunatic');
+  if (o.Brute) evilNames.push('Brute');
+  if (o.Revealer) evilNames.push('Revealer');
+  if (o.Trickster) evilNames.push('Trickster');
+
+  return { good: goodNames.length, evil: evilNames.length, goodNames, evilNames };
+}
+
+export function validateConfiguration(players: number, o: RolesToggle) {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const { good: goodSel, evil: evilSel, goodNames, evilNames } = selectedRoleCounts(o);
+
+  let goodSlots = 0;
+  let evilSlots = 0;
+  try {
+    const t = teamCounts(players);
+    goodSlots = t.good;
+    evilSlots = t.evil;
+  } catch {
+    errors.push('Players must be between 5 and 10.');
+  }
+
+  if (goodSlots > 0 && evilSlots > 0) {
+    if (evilSel > evilSlots) {
+      const over = evilSel - evilSlots;
+      errors.push(`Too many Evil roles selected: ${evilSel}/${evilSlots}. Reduce by ${over}. Currently: ${evilNames.join(', ')}.`);
+    }
+    if (goodSel > goodSlots) {
+      const over = goodSel - goodSlots;
+      errors.push(`Too many Good roles selected: ${goodSel}/${goodSlots}. Reduce by ${over}. Currently: ${goodNames.join(', ')}.`);
+    }
+  }
+
+  if (o.Percival && !o.Merlin && !o.Morgana) {
+    warnings.push('Percival has nobody to see (neither Merlin nor Morgana are selected).');
+  }
+  if (o.MessengerSenior && !o.MessengerJunior) {
+    warnings.push('Senior Messenger is enabled but Junior Messenger is not; the reveal step for Messengers will be skipped.');
+  }
+
+  return {
+    errors,
+    warnings,
+    counts: {
+      goodSelected: goodSel,
+      evilSelected: evilSel,
+      goodSlots,
+      evilSlots,
+      goodNames,
+      evilNames
+    }
+  };
+}

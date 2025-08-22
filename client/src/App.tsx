@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import "./styles.css";
 import type { RolesToggle, Assignment } from "./types";
 import { getAssignments, getNarration, ttsEnabledServerSide, ttsMp3Blob } from "./api";
+import { validateConfiguration } from "./logic";  
+
 
 const defaultRoles: RolesToggle = {
   Merlin: true, Percival: true, Mordred: false, Morgana: true, Oberon: false,
@@ -16,12 +18,16 @@ const defaultRoles: RolesToggle = {
 
 export default function App() {
   const [players, setPlayers] = useState(7);
+  const [playersInput, setPlayersInput] = useState("7");
   const [roles, setRoles] = useState<RolesToggle>(defaultRoles);
   const [assignments, setAssignments] = useState<Assignment[] | null>(null);
   const [narration, setNarration] = useState<{steps:string[], notes:string[]} | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const synthRef = useRef(window.speechSynthesis);
-
+  const [rate, setRate] = useState(0.95);         // 0.6x .. 1.4x
+  const [repeat, setRepeat] = useState(1);        // 1, 2, 3 times
+  const audioRef = useRef<HTMLAudioElement | null>(null); // for server TTS stop()
+  const ttsCache = useRef<Map<string, Blob>>(new Map());  // cache server mp3 per line
   useEffect(() => { synthRef.current?.cancel(); setSpeaking(false); }, []);
 
   async function handleAssign() {
@@ -35,38 +41,90 @@ export default function App() {
   }
 
   async function speakNarration() {
-    if (!narration) return;
-    setSpeaking(true);
-    if (ttsEnabledServerSide()) {
-      // server TTS: combine lines and play as single mp3
-      const blob = await ttsMp3Blob(narration.steps.join(" "));
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.onended = () => setSpeaking(false);
-      await audio.play();
-    } else {
-      // Browser TTS line-by-line
-      for (const line of narration.steps) {
-        if (!speaking) break;
-        await speak(line);
-      }
-      setSpeaking(false);
-    }
-  }
+  if (!narration) return;
+  setSpeaking(true);
 
-  function speak(text: string) {
-    return new Promise<void>((resolve) => {
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = 0.95;
-      utter.onend = () => resolve();
-      synthRef.current?.speak(utter);
-    });
+  const gapBetweenLinesMs = 650;      // pause between different lines
+  const gapBetweenRepeatsMs = 350;    // short pause between repeats of the same line
+
+  const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+  try {
+    if (ttsEnabledServerSide()) {
+      // Per-line server TTS so we can repeat lines.
+      for (const line of narration.steps) {
+        for (let i = 0; i < repeat; i++) {
+          if (!speaking) return;
+          let blob = ttsCache.current.get(line);
+          if (!blob) {
+            blob = await ttsMp3Blob(line);
+            ttsCache.current.set(line, blob);
+          }
+          const url = URL.createObjectURL(blob);
+          await new Promise<void>((resolve, reject) => {
+            const audio = new Audio(url);
+            audioRef.current = audio;
+            audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+            audio.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+            audio.play();
+          });
+          if (i < repeat - 1) await delay(gapBetweenRepeatsMs);
+        }
+        await delay(gapBetweenLinesMs);
+      }
+    } else {
+      // Browser TTS (rate supported)
+      for (const line of narration.steps) {
+        for (let i = 0; i < repeat; i++) {
+          if (!speaking) return;
+          await speak(line, rate);
+          if (i < repeat - 1) await delay(gapBetweenRepeatsMs);
+        }
+        await delay(gapBetweenLinesMs);
+      }
+    }
+  } finally {
+    setSpeaking(false);
   }
+}
+
+
+  function speak(text: string, r: number) {
+  return new Promise<void>((resolve) => {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = r;              // <- use selected speed
+    utter.pitch = 1.0;
+    utter.onend = () => resolve();
+    synthRef.current?.speak(utter);
+  });
+}
+
 
   function stop() {
-    setSpeaking(false);
-    synthRef.current?.cancel();
+  setSpeaking(false);
+  // Browser TTS
+  synthRef.current?.cancel();
+  // Server TTS
+  if (audioRef.current) {
+    try { audioRef.current.pause(); audioRef.current.src = ""; } catch {}
+    audioRef.current = null;
   }
+}
+
+const validation = validateConfiguration(players, roles);
+const hasErrors = validation.errors.length > 0;
+
+function pillClass(selected: number, slots: number) {
+  if (selected > slots) return "pill red";
+  if (selected === slots) return "pill green";
+  if (selected >= Math.max(0, slots - 1)) return "pill amber";
+  return "pill";
+}
+const goodPill = pillClass(validation.counts.goodSelected, validation.counts.goodSlots);
+const evilPill = pillClass(validation.counts.evilSelected, validation.counts.evilSlots);
+
+const leftPanelClass = "panel" + (hasErrors ? " error-outline" : "");
+
 
   return (
     <div className="wrap">
@@ -75,11 +133,105 @@ export default function App() {
 
       <div className="grid">
         {/* LEFT: Controls */}
-        <div className="panel">
+        <div className="leftPanelClass">
+          <div className="row" style={{ alignItems:'center' }}>
+            <label style={{ minWidth:130 }}>Narration speed</label>
+            <input
+              type="range"
+              min={0.6}
+              max={1.4}
+              step={0.05}
+              value={rate}
+              onChange={e => setRate(parseFloat(e.target.value))}
+              style={{ flex:1 }}
+            />
+            <span style={{ width:56, textAlign:'right' }}>{rate.toFixed(2)}×</span>
+          </div>
+
+          <div className="row">
+            <label style={{ minWidth:130 }}>Repeat each line</label>
+            <select value={repeat} onChange={e => setRepeat(parseInt(e.target.value, 10))}>
+              <option value={1}>Once</option>
+              <option value={2}>Twice</option>
+              <option value={3}>Thrice</option>
+            </select>
+          </div>
+
           <div className="row">
             <label>Players (5–10)</label>
-            <input type="number" min={5} max={10} value={players}
-              onChange={e => setPlayers(parseInt(e.target.value || "5"))}/>
+            <input
+              type="number"
+              min={5}
+              max={10}
+              value={playersInput}
+              onChange={(e) => {
+                const v = e.currentTarget.value;        // string while typing
+                setPlayersInput(v);
+                const n = parseInt(v, 10);
+                if (!Number.isNaN(n)) {
+                  setPlayers(n);                         // live-update when numeric
+                }
+              }}
+              onBlur={() => {
+                const n = parseInt(playersInput, 10);
+                const clamped = Number.isNaN(n) ? 5 : Math.max(5, Math.min(10, n));
+                setPlayers(clamped);
+                setPlayersInput(String(clamped));        // snap to valid range on blur
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); // commit on Enter
+              }}
+            />
+
+          </div>
+          <div className="status-line">
+            <div className="status-group">
+              <span><b>Good</b></span>
+              <span className={goodPill}>
+                {validation.counts.goodSelected} / {validation.counts.goodSlots}
+              </span>
+            </div>
+            <div className="status-group">
+              <span><b>Evil</b></span>
+              <span className={evilPill}>
+                {validation.counts.evilSelected} / {validation.counts.evilSlots}
+              </span>
+            </div>
+          </div>
+
+          {validation.errors.length > 0 && (
+            <div className="alert error" role="alert" aria-live="assertive">
+              <b>Cannot start:</b>
+              <ul>{validation.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+            </div>
+          )}
+
+          {validation.warnings.length > 0 && (
+            <div className="alert warn" role="status" aria-live="polite">
+              <b>Heads up:</b>
+              <ul>{validation.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+            </div>
+          )}
+
+          <div className="panel" style={{ marginTop: 8 }}>
+            <div className="row" style={{justifyContent:'space-between'}}>
+              <div><b>Good</b>: {validation.counts.goodSelected} / {validation.counts.goodSlots}</div>
+              <div><b>Evil</b>: {validation.counts.evilSelected} / {validation.counts.evilSlots}</div>
+            </div>
+
+            {validation.errors.length > 0 && (
+              <div className="alert error">
+                <b>Cannot start:</b>
+                <ul>{validation.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+              </div>
+            )}
+
+            {validation.warnings.length > 0 && (
+              <div className="alert warn">
+                <b>Heads up:</b>
+                <ul>{validation.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+              </div>
+            )}
           </div>
 
           <h4>Base roles</h4>
@@ -166,10 +318,15 @@ export default function App() {
           </details>
 
           <div className="row">
-            <button onClick={handleAssign}>Assign Roles</button>
+            <button
+              onClick={handleAssign}
+              disabled={hasErrors}
+              title={hasErrors ? validation.errors[0] : undefined}>Assign Roles
+            </button>
+
           </div>
 
-          <div className="muted small">Browser TTS uses the Web Speech API. If you deploy a server and set <code>VITE_SERVER_URL</code>, you can switch to premium voices.</div>
+          {/* <div className="muted small">Browser TTS uses the Web Speech API. If you deploy a server and set <code>VITE_SERVER_URL</code>, you can switch to premium voices.</div> */}
         </div>
 
         {/* CENTER: Narration */}
@@ -183,9 +340,16 @@ export default function App() {
             )}
           </div>
           <div className="row">
-            <button onClick={async ()=>{ await prepareNarration(); await speakNarration(); setSpeaking(true);}}>Narrate Setup</button>
+            <button
+              onClick={async ()=>{ await prepareNarration(); if (!hasErrors) { await speakNarration(); setSpeaking(true);} }}
+              disabled={hasErrors}
+              title={hasErrors ? validation.errors[0] : undefined}
+            >Narrate Setup
+            </button>
+
             <button onClick={stop} disabled={!speaking}>Stop</button>
           </div>
+
           <h4>Host notes</h4>
           <ul>
             {narration?.notes.map((n,i)=>(<li key={i}>{n}</li>))}
