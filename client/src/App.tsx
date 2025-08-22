@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import "./styles.css";
 import type { RolesToggle, Assignment } from "./types";
 import { getAssignments, getNarration, ttsEnabledServerSide, ttsMp3Blob } from "./api";
+import { validateConfiguration } from "./logic";  
+
 
 const defaultRoles: RolesToggle = {
   Merlin: true, Percival: true, Mordred: false, Morgana: true, Oberon: false,
@@ -108,6 +110,20 @@ export default function App() {
   }
 }
 
+const validation = validateConfiguration(players, roles);
+const hasErrors = validation.errors.length > 0;
+
+function pillClass(selected: number, slots: number) {
+  if (selected > slots) return "pill red";
+  if (selected === slots) return "pill green";
+  if (selected >= Math.max(0, slots - 1)) return "pill amber";
+  return "pill";
+}
+const goodPill = pillClass(validation.counts.goodSelected, validation.counts.goodSlots);
+const evilPill = pillClass(validation.counts.evilSelected, validation.counts.evilSlots);
+
+const leftPanelClass = "panel" + (hasErrors ? " error-outline" : "");
+
 
   return (
     <div className="wrap">
@@ -116,7 +132,7 @@ export default function App() {
 
       <div className="grid">
         {/* LEFT: Controls */}
-        <div className="panel">
+        <div className="leftPanelClass">
           <div className="row" style={{ alignItems:'center' }}>
             <label style={{ minWidth:130 }}>Narration speed</label>
             <input
@@ -144,6 +160,55 @@ export default function App() {
             <label>Players (5–10)</label>
             <input type="number" min={5} max={10} value={players}
               onChange={e => setPlayers(parseInt(e.target.value || "5"))}/>
+          </div>
+          <div className="status-line">
+            <div className="status-group">
+              <span><b>Good</b></span>
+              <span className={goodPill}>
+                {validation.counts.goodSelected} / {validation.counts.goodSlots}
+              </span>
+            </div>
+            <div className="status-group">
+              <span><b>Evil</b></span>
+              <span className={evilPill}>
+                {validation.counts.evilSelected} / {validation.counts.evilSlots}
+              </span>
+            </div>
+          </div>
+
+          {validation.errors.length > 0 && (
+            <div className="alert error" role="alert" aria-live="assertive">
+              <b>Cannot start:</b>
+              <ul>{validation.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+            </div>
+          )}
+
+          {validation.warnings.length > 0 && (
+            <div className="alert warn" role="status" aria-live="polite">
+              <b>Heads up:</b>
+              <ul>{validation.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+            </div>
+          )}
+
+          <div className="panel" style={{ marginTop: 8 }}>
+            <div className="row" style={{justifyContent:'space-between'}}>
+              <div><b>Good</b>: {validation.counts.goodSelected} / {validation.counts.goodSlots}</div>
+              <div><b>Evil</b>: {validation.counts.evilSelected} / {validation.counts.evilSlots}</div>
+            </div>
+
+            {validation.errors.length > 0 && (
+              <div className="alert error">
+                <b>Cannot start:</b>
+                <ul>{validation.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+              </div>
+            )}
+
+            {validation.warnings.length > 0 && (
+              <div className="alert warn">
+                <b>Heads up:</b>
+                <ul>{validation.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+              </div>
+            )}
           </div>
 
           <h4>Base roles</h4>
@@ -230,7 +295,12 @@ export default function App() {
           </details>
 
           <div className="row">
-            <button onClick={handleAssign}>Assign Roles</button>
+            <button
+              onClick={handleAssign}
+              disabled={hasErrors}
+              title={hasErrors ? validation.errors[0] : undefined}>Assign Roles
+            </button>
+
           </div>
 
           <div className="muted small">Browser TTS uses the Web Speech API. If you deploy a server and set <code>VITE_SERVER_URL</code>, you can switch to premium voices.</div>
@@ -247,9 +317,16 @@ export default function App() {
             )}
           </div>
           <div className="row">
-            <button onClick={async ()=>{ await prepareNarration(); await speakNarration(); setSpeaking(true);}}>Narrate Setup</button>
+            <button
+              onClick={async ()=>{ await prepareNarration(); if (!hasErrors) { await speakNarration(); setSpeaking(true);} }}
+              disabled={hasErrors}
+              title={hasErrors ? validation.errors[0] : undefined}
+            >Narrate Setup
+            </button>
+
             <button onClick={stop} disabled={!speaking}>Stop</button>
           </div>
+
           <h4>Host notes</h4>
           <ul>
             {narration?.notes.map((n,i)=>(<li key={i}>{n}</li>))}
