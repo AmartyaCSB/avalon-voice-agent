@@ -18,6 +18,7 @@ const defaultRoles: RolesToggle = {
 
 export default function App() {
   const [players, setPlayers] = useState(7);
+  const [playersInput, setPlayersInput] = useState("7");
   const [roles, setRoles] = useState<RolesToggle>(defaultRoles);
   const [assignments, setAssignments] = useState<Assignment[] | null>(null);
   const [narration, setNarration] = useState<{steps:string[], notes:string[]} | null>(null);
@@ -43,7 +44,7 @@ export default function App() {
   if (!narration) return;
   setSpeaking(true);
 
-  const gapBetweenLinesMs = 550;      // pause between different lines
+  const gapBetweenLinesMs = 650;      // pause between different lines
   const gapBetweenRepeatsMs = 350;    // short pause between repeats of the same line
 
   const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -158,8 +159,30 @@ const leftPanelClass = "panel" + (hasErrors ? " error-outline" : "");
 
           <div className="row">
             <label>Players (5–10)</label>
-            <input type="number" min={5} max={10} value={players}
-              onChange={e => setPlayers(parseInt(e.target.value || "5"))}/>
+            <input
+              type="number"
+              min={5}
+              max={10}
+              value={playersInput}
+              onChange={(e) => {
+                const v = e.currentTarget.value;        // string while typing
+                setPlayersInput(v);
+                const n = parseInt(v, 10);
+                if (!Number.isNaN(n)) {
+                  setPlayers(n);                         // live-update when numeric
+                }
+              }}
+              onBlur={() => {
+                const n = parseInt(playersInput, 10);
+                const clamped = Number.isNaN(n) ? 5 : Math.max(5, Math.min(10, n));
+                setPlayers(clamped);
+                setPlayersInput(String(clamped));        // snap to valid range on blur
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); // commit on Enter
+              }}
+            />
+
           </div>
           <div className="status-line">
             <div className="status-group">

@@ -229,23 +229,29 @@ export function validateConfiguration(players: number, o: RolesToggle) {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (players < 5 || players > 10) {
+  const { good: goodSel, evil: evilSel, goodNames, evilNames } = selectedRoleCounts(o);
+
+  let goodSlots = 0;
+  let evilSlots = 0;
+  try {
+    const t = teamCounts(players);
+    goodSlots = t.good;
+    evilSlots = t.evil;
+  } catch {
     errors.push('Players must be between 5 and 10.');
   }
 
-  const { good: goodSel, evil: evilSel, goodNames, evilNames } = selectedRoleCounts(o);
-  const { good: goodSlots, evil: evilSlots } = teamCounts(players);
-
-  if (evilSel > evilSlots) {
-    const over = evilSel - evilSlots;
-    errors.push(`Too many Evil roles selected: ${evilSel}/${evilSlots}. Reduce by ${over}. Currently: ${evilNames.join(', ')}.`);
+  if (goodSlots > 0 && evilSlots > 0) {
+    if (evilSel > evilSlots) {
+      const over = evilSel - evilSlots;
+      errors.push(`Too many Evil roles selected: ${evilSel}/${evilSlots}. Reduce by ${over}. Currently: ${evilNames.join(', ')}.`);
+    }
+    if (goodSel > goodSlots) {
+      const over = goodSel - goodSlots;
+      errors.push(`Too many Good roles selected: ${goodSel}/${goodSlots}. Reduce by ${over}. Currently: ${goodNames.join(', ')}.`);
+    }
   }
-  if (goodSel > goodSlots) {
-    const over = goodSel - goodSlots;
-    errors.push(`Too many Good roles selected: ${goodSel}/${goodSlots}. Reduce by ${over}. Currently: ${goodNames.join(', ')}.`);
-  }
 
-  // Soft guidance
   if (o.Percival && !o.Merlin && !o.Morgana) {
     warnings.push('Percival has nobody to see (neither Merlin nor Morgana are selected).');
   }
@@ -257,9 +263,12 @@ export function validateConfiguration(players: number, o: RolesToggle) {
     errors,
     warnings,
     counts: {
-      goodSelected: goodSel, evilSelected: evilSel,
-      goodSlots, evilSlots,
-      goodNames, evilNames
+      goodSelected: goodSel,
+      evilSelected: evilSel,
+      goodSlots,
+      evilSlots,
+      goodNames,
+      evilNames
     }
   };
 }
