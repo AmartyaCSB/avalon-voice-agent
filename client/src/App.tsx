@@ -303,7 +303,7 @@ const leftPanelClass = "panel" + (hasErrors ? " error-outline" : "");
 
           </div>
 
-          <div className="muted small">Browser TTS uses the Web Speech API. If you deploy a server and set <code>VITE_SERVER_URL</code>, you can switch to premium voices.</div>
+          {/* <div className="muted small">Browser TTS uses the Web Speech API. If you deploy a server and set <code>VITE_SERVER_URL</code>, you can switch to premium voices.</div> */}
         </div>
 
         {/* CENTER: Narration */}
