@@ -3,6 +3,11 @@ import "./styles.css";
 import type { RolesToggle, Assignment } from "./types";
 import { getAssignments, getNarration, ttsEnabledServerSide, ttsMp3Blob } from "./api";
 import { validateConfiguration } from "./logic";  
+import { isAdvanced, teamCountsSafe, buildSummary } from "./logic"; 
+import { marked } from "marked";
+import DOMPurify from "dompurify";
+import { faqMarkdown } from "./faq";
+
 
 
 const defaultRoles: RolesToggle = {
@@ -23,70 +28,128 @@ export default function App() {
   const [assignments, setAssignments] = useState<Assignment[] | null>(null);
   const [narration, setNarration] = useState<{steps:string[], notes:string[]} | null>(null);
   const [speaking, setSpeaking] = useState(false);
+  const [loadingNarration, setLoadingNarration] = useState(false);
+  const speakingRef = useRef(false);
   const synthRef = useRef(window.speechSynthesis);
   const [rate, setRate] = useState(0.95);         // 0.6x .. 1.4x
   const [repeat, setRepeat] = useState(1);        // 1, 2, 3 times
   const audioRef = useRef<HTMLAudioElement | null>(null); // for server TTS stop()
   const ttsCache = useRef<Map<string, Blob>>(new Map());  // cache server mp3 per line
   useEffect(() => { synthRef.current?.cancel(); setSpeaking(false); }, []);
+  const [summary, setSummary] = useState("");
+  const { good: seatGood, evil: seatEvil } = teamCountsSafe(players);
+  const runRef = useRef(0);                               
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpTab, setHelpTab] = useState<"faq"|"rules">("faq");
+  const [rulesHtml, setRulesHtml] = useState<string>("");
+  const [loadingRulesDoc, setLoadingRulesDoc] = useState(false);
+        
+  async function openHelp(tab: "faq"|"rules" = "faq") {
+    setHelpOpen(true);
+    setHelpTab(tab);
 
-  async function handleAssign() {
-    const res = await getAssignments(players, roles);
-    setAssignments(res.assignments);
-  }
-
-  async function prepareNarration() {
-    const res = await getNarration(players, roles);
-    setNarration(res);
-  }
-
-  async function speakNarration() {
-  if (!narration) return;
-  setSpeaking(true);
-
-  const gapBetweenLinesMs = 650;      // pause between different lines
-  const gapBetweenRepeatsMs = 350;    // short pause between repeats of the same line
-
-  const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
-
-  try {
-    if (ttsEnabledServerSide()) {
-      // Per-line server TTS so we can repeat lines.
-      for (const line of narration.steps) {
-        for (let i = 0; i < repeat; i++) {
-          if (!speaking) return;
-          let blob = ttsCache.current.get(line);
-          if (!blob) {
-            blob = await ttsMp3Blob(line);
-            ttsCache.current.set(line, blob);
-          }
-          const url = URL.createObjectURL(blob);
-          await new Promise<void>((resolve, reject) => {
-            const audio = new Audio(url);
-            audioRef.current = audio;
-            audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
-            audio.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
-            audio.play();
-          });
-          if (i < repeat - 1) await delay(gapBetweenRepeatsMs);
-        }
-        await delay(gapBetweenLinesMs);
-      }
-    } else {
-      // Browser TTS (rate supported)
-      for (const line of narration.steps) {
-        for (let i = 0; i < repeat; i++) {
-          if (!speaking) return;
-          await speak(line, rate);
-          if (i < repeat - 1) await delay(gapBetweenRepeatsMs);
-        }
-        await delay(gapBetweenLinesMs);
+    if (tab === "rules" && !rulesHtml) {
+      setLoadingRulesDoc(true);
+      try {
+        const url = `${import.meta.env.BASE_URL}rules.md`; // served from client/public
+        const md = await fetch(url).then(r => r.text());
+        const html = marked.parse(md);
+        setRulesHtml(DOMPurify.sanitize(html as string));
+      } finally {
+        setLoadingRulesDoc(false);
       }
     }
-  } finally {
-    setSpeaking(false);
   }
+
+
+  async function handleAssign() {
+  // 1) Assign seats
+  const res = await getAssignments(players, roles);
+  setAssignments(res.assignments);
+
+  // 2) Prepare narration text immediately (do NOT auto-speak)
+  setLoadingNarration(true);
+  try {
+    const nar = await getNarration(players, roles);
+    setNarration(nar);
+  } finally {
+    setLoadingNarration(false);
+  }
+
+  // 3) Update the summary line (Base vs Advanced, seats, selected roles)
+  setSummary(buildSummary(players, roles));
 }
+
+  async function onNarrate() {
+    if (validation.errors.length) return;
+
+    const myRun = ++runRef.current;    
+    setLoadingNarration(true);
+    try {
+      const res = await getNarration(players, roles);
+      if (runRef.current !== myRun) return;   // aborted
+      setNarration(res);
+      await speakNarration(res, myRun);       // pass token
+    } finally {
+      if (runRef.current === myRun) setLoadingNarration(false);
+    }
+  }
+
+  async function speakNarration(
+    data?: { steps: string[]; notes: string[] },
+    runId?: number
+  ) {
+    const src = data ?? narration;
+    if (!src) return;
+
+    setSpeaking(true);
+    speakingRef.current = true;
+    const currentRun = runId ?? runRef.current;
+
+    const gapBetweenLinesMs = 550;
+    const gapBetweenRepeatsMs = 350;
+    const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+    try {
+      if (ttsEnabledServerSide()) {
+        for (const line of src.steps) {
+          if (runRef.current !== currentRun || !speakingRef.current) return;
+          for (let i = 0; i < repeat; i++) {
+            if (runRef.current !== currentRun || !speakingRef.current) return;
+            let blob = ttsCache.current.get(line);
+            if (!blob) { blob = await ttsMp3Blob(line); ttsCache.current.set(line, blob); }
+            const url = URL.createObjectURL(blob);
+            await new Promise<void>((resolve, reject) => {
+              const audio = new Audio(url);
+              audioRef.current = audio;
+              audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+              audio.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+              audio.play();
+            });
+            if (i < repeat - 1) await delay(gapBetweenRepeatsMs);
+          }
+          await delay(gapBetweenLinesMs);
+        }
+      } else {
+        for (const line of src.steps) {
+          if (runRef.current !== currentRun || !speakingRef.current) return;
+          for (let i = 0; i < repeat; i++) {
+            if (runRef.current !== currentRun || !speakingRef.current) return;
+            await speak(line, rate);
+            if (i < repeat - 1) await delay(gapBetweenRepeatsMs);
+          }
+          await delay(gapBetweenLinesMs);
+        }
+      }
+    } finally {
+      if (runRef.current === currentRun) {
+        setSpeaking(false);
+        speakingRef.current = false;
+      }
+    }
+  }
+
+
 
 
   function speak(text: string, r: number) {
@@ -101,17 +164,25 @@ export default function App() {
 
 
   function stop() {
-  setSpeaking(false);
-  // Browser TTS
-  synthRef.current?.cancel();
-  // Server TTS
-  if (audioRef.current) {
-    try { audioRef.current.pause(); audioRef.current.src = ""; } catch {}
-    audioRef.current = null;
+    runRef.current++;                 
+    setSpeaking(false);
+    setLoadingNarration(false);       
+    speakingRef.current = false;
+
+    // Browser TTS
+    synthRef.current?.cancel();
+    // Server TTS
+    if (audioRef.current) {
+      try { audioRef.current.pause(); } catch {}
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
   }
-}
+
 
 const validation = validateConfiguration(players, roles);
+const { counts } = validation
+const quick = `**Current selection:** Players ${players} — Seats: Good ${counts.goodSlots}, Evil ${counts.evilSlots}. Selected: Good ${counts.goodSelected}, Evil ${counts.evilSelected}.`;
 const hasErrors = validation.errors.length > 0;
 
 function pillClass(selected: number, slots: number) {
@@ -129,35 +200,21 @@ const leftPanelClass = "panel" + (hasErrors ? " error-outline" : "");
   return (
     <div className="wrap">
       <h1>Avalon Voice Agent</h1>
-      <p className="muted">Pick roles, assign seats, and narrate the reveal. Advanced Big Box modules included.</p>
+      <p className="muted">Pick roles, assign roles, and narrate the reveal. Advanced Big Box modules included.</p>
 
       <div className="grid">
         {/* LEFT: Controls */}
-        <div className="leftPanelClass">
-          <div className="row" style={{ alignItems:'center' }}>
-            <label style={{ minWidth:130 }}>Narration speed</label>
-            <input
-              type="range"
-              min={0.6}
-              max={1.4}
-              step={0.05}
-              value={rate}
-              onChange={e => setRate(parseFloat(e.target.value))}
-              style={{ flex:1 }}
-            />
-            <span style={{ width:56, textAlign:'right' }}>{rate.toFixed(2)}×</span>
+        <div className={leftPanelClass}>
+          <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
+            <button onClick={() => openHelp("faq")}>FAQ</button>
+            <button onClick={() => openHelp("rules")}>Extended Rules</button>
           </div>
 
-          <div className="row">
-            <label style={{ minWidth:130 }}>Repeat each line</label>
-            <select value={repeat} onChange={e => setRepeat(parseInt(e.target.value, 10))}>
-              <option value={1}>Once</option>
-              <option value={2}>Twice</option>
-              <option value={3}>Thrice</option>
-            </select>
-          </div>
 
-          <div className="row">
+          <p className="muted small"> 
+            Step 1: Pick number of players . Step 2: pick base/advanced roles (Assassin is already present as an evil player!)</p> 
+
+          <div className="row" style={{ alignItems: "center", gap: 10 }}>
             <label>Players (5–10)</label>
             <input
               type="number"
@@ -165,39 +222,51 @@ const leftPanelClass = "panel" + (hasErrors ? " error-outline" : "");
               max={10}
               value={playersInput}
               onChange={(e) => {
-                const v = e.currentTarget.value;        // string while typing
+                const v = e.currentTarget.value;
                 setPlayersInput(v);
                 const n = parseInt(v, 10);
-                if (!Number.isNaN(n)) {
-                  setPlayers(n);                         // live-update when numeric
-                }
+                if (!Number.isNaN(n)) setPlayers(n);
               }}
               onBlur={() => {
                 const n = parseInt(playersInput, 10);
                 const clamped = Number.isNaN(n) ? 5 : Math.max(5, Math.min(10, n));
                 setPlayers(clamped);
-                setPlayersInput(String(clamped));        // snap to valid range on blur
+                setPlayersInput(String(clamped));
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); // commit on Enter
+                if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
               }}
             />
-
+            <span className="muted small" style={{ whiteSpace: "nowrap" }}>
+              {seatGood && seatEvil ? `Seats → Good ${seatGood} · Evil ${seatEvil}` : "Choose 5–10 players"}
+            </span>
           </div>
+
+          
+          <h4>Base roles</h4>
+          <div className="roles">
+            {(['Merlin','Percival','Mordred','Morgana','Oberon'] as (keyof RolesToggle)[]).map(k => (
+              <label key={k} className="chk">
+                <input type="checkbox" checked={roles[k] as unknown as boolean}
+                  onChange={e => setRoles(r => ({ ...r, [k]: e.target.checked }))}/>
+                <span>{k}</span>
+              </label>
+            ))}
+          </div>
+
           <div className="status-line">
             <div className="status-group">
               <span><b>Good</b></span>
-              <span className={goodPill}>
-                {validation.counts.goodSelected} / {validation.counts.goodSlots}
-              </span>
+              <span className={goodPill} title="Total Good seats for the selected player count">Seats: {validation.counts.goodSlots}</span>
+              <span className={goodPill} title="Good special roles you've toggled">Selected: {validation.counts.goodSelected}</span>
             </div>
             <div className="status-group">
               <span><b>Evil</b></span>
-              <span className={evilPill}>
-                {validation.counts.evilSelected} / {validation.counts.evilSlots}
-              </span>
+              <span className={evilPill} title="Total Evil seats for the selected player count">Seats: {validation.counts.evilSlots}</span>
+              <span className={evilPill} title="Evil special roles you've toggled">Selected: {validation.counts.evilSelected}</span>
             </div>
           </div>
+
 
           {validation.errors.length > 0 && (
             <div className="alert error" role="alert" aria-live="assertive">
@@ -212,38 +281,6 @@ const leftPanelClass = "panel" + (hasErrors ? " error-outline" : "");
               <ul>{validation.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
             </div>
           )}
-
-          <div className="panel" style={{ marginTop: 8 }}>
-            <div className="row" style={{justifyContent:'space-between'}}>
-              <div><b>Good</b>: {validation.counts.goodSelected} / {validation.counts.goodSlots}</div>
-              <div><b>Evil</b>: {validation.counts.evilSelected} / {validation.counts.evilSlots}</div>
-            </div>
-
-            {validation.errors.length > 0 && (
-              <div className="alert error">
-                <b>Cannot start:</b>
-                <ul>{validation.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
-              </div>
-            )}
-
-            {validation.warnings.length > 0 && (
-              <div className="alert warn">
-                <b>Heads up:</b>
-                <ul>{validation.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
-              </div>
-            )}
-          </div>
-
-          <h4>Base roles</h4>
-          <div className="roles">
-            {(['Merlin','Percival','Mordred','Morgana','Oberon'] as (keyof RolesToggle)[]).map(k => (
-              <label key={k} className="chk">
-                <input type="checkbox" checked={roles[k] as unknown as boolean}
-                  onChange={e => setRoles(r => ({ ...r, [k]: e.target.checked }))}/>
-                <span>{k}</span>
-              </label>
-            ))}
-          </div>
 
           <details>
             <summary><b>Advanced play</b></summary>
@@ -325,13 +362,85 @@ const leftPanelClass = "panel" + (hasErrors ? " error-outline" : "");
             </button>
 
           </div>
+          {helpOpen && (
+            <div className="modal-backdrop" onClick={() => setHelpOpen(false)}>
+              <div className="modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div className="tabs">
+                    <button
+                      className={helpTab === "faq" ? "tab active" : "tab"}
+                      onClick={() => setHelpTab("faq")}
+                    >FAQ</button>
+                    <button
+                      className={helpTab === "rules" ? "tab active" : "tab"}
+                      onClick={() => openHelp("rules")}
+                    >Extended Rules</button>
+                  </div>
+                  <button className="close" onClick={() => setHelpOpen(false)}>×</button>
+                </div>
+
+                <div className="modal-body">
+                  {helpTab === "faq" ? (
+                    <article
+                      className="md"
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(
+                          marked.parse(
+                            `**Current selection:** Players ${players} — Seats: Good ${counts.goodSlots}, Evil ${counts.evilSlots}. `
+                            + `Selected: Good ${counts.goodSelected}, Evil ${counts.evilSelected}.`
+                            + `\n\n` + faqMarkdown
+                          ) as string
+                        )
+                      }}
+                    />
+                  ) : loadingRulesDoc ? (
+                    <div className="muted">Loading README…</div>
+                  ) : (
+                    <article className="md" dangerouslySetInnerHTML={{ __html: rulesHtml }} />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* <div className="muted small">Browser TTS uses the Web Speech API. If you deploy a server and set <code>VITE_SERVER_URL</code>, you can switch to premium voices.</div> */}
         </div>
 
         {/* CENTER: Narration */}
         <div className="panel">
-          <h3>Narration</h3>
+          <div className="row" style={{ alignItems:'center' }}>
+            <label style={{ minWidth:130 }}>Narration speed</label>
+            <input
+              type="range"
+              min={0.6}
+              max={1.4}
+              step={0.05}
+              value={rate}
+              onChange={e => setRate(parseFloat(e.target.value))}
+              style={{ flex:1 }}
+            />
+            <span style={{ width:56, textAlign:'right' }}>{rate.toFixed(2)}×</span>
+          </div>
+
+          <div className="row">
+            <label style={{ minWidth:130 }}>Repeat each line</label>
+            <select value={repeat} onChange={e => setRepeat(parseInt(e.target.value, 10))}>
+              <option value={1}>Once</option>
+              <option value={2}>Twice</option>
+              <option value={3}>Thrice</option>
+            </select>
+          </div>
+
+          <h3>Narration - 
+            <span className="mode-tag">{isAdvanced(roles) ? " Advanced play" : " Base game"}</span>
+          </h3>
+
+          {summary && (
+            <div className="muted small" style={{ margin: "6px 0 10px" }}>
+              {summary}
+            </div>
+          )}
+
           <div className="box">
             {narration ? (
               <textarea readOnly value={narration.steps.map((s,i)=>`${i+1}. ${s}`).join("\n\n")} />
@@ -341,11 +450,15 @@ const leftPanelClass = "panel" + (hasErrors ? " error-outline" : "");
           </div>
           <div className="row">
             <button
-              onClick={async ()=>{ await prepareNarration(); if (!hasErrors) { await speakNarration(); setSpeaking(true);} }}
-              disabled={hasErrors}
+              onClick={onNarrate}
+              disabled={hasErrors || loadingNarration}
               title={hasErrors ? validation.errors[0] : undefined}
-            >Narrate Setup
+            >
+              {loadingNarration ? "Preparing…" : "Narrate Setup"}
             </button>
+
+
+
 
             <button onClick={stop} disabled={!speaking}>Stop</button>
           </div>

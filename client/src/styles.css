@@ -38,3 +38,37 @@ textarea{width:100%;min-height:220px;border:0;resize:vertical;font:inherit}
 .panel.error-outline{ border-color:#fecaca; box-shadow:0 0 0 2px rgba(254,202,202,.35) inset; }
 
 button[disabled][title]{ cursor:not-allowed; }
+.status-group .pill { margin-left:4px; }
+.mode-tag{
+  margin-left:8px; padding:2px 8px; border-radius:999px;
+  font-size:12px; font-weight:600;
+  background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe;
+}
+/* Modal */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.4);
+  display:flex; align-items:center; justify-content:center; z-index:50;
+}
+.modal{
+  width:min(980px, 92vw); max-height:86vh; overflow:hidden;
+  background:#fff; border:1px solid #e5e7eb; border-radius:14px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25); display:flex; flex-direction:column;
+}
+.modal-header{ display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px; border-bottom:1px solid #eee; background:#fafafa; }
+.tabs{ display:flex; gap:6px; }
+.tab{ padding:6px 10px; border-radius:8px; border:1px solid #e5e7eb; background:#fff; }
+.tab.active{ background:#eef2ff; border-color:#c7d2fe; color:#3730a3; font-weight:600; }
+.close{ font-size:22px; line-height:1; padding:2px 10px; border-radius:8px; }
+.modal-body{ padding:14px 16px; overflow:auto; }
+
+/* Basic markdown */
+.md h1{ font-size:22px; margin:0 0 8px; }
+.md h2{ font-size:18px; margin:18px 0 6px; }
+.md h3{ font-size:16px; margin:14px 0 6px; }
+.md p{ margin:8px 0; }
+.md ul{ padding-left:22px; margin:8px 0; }
+.md table{ border-collapse:collapse; margin:10px 0; }
+.md th, .md td{ border:1px solid #e5e7eb; padding:6px 8px; }
+.md blockquote{ border-left:3px solid #e5e7eb; padding-left:10px; color:#555; }
+
