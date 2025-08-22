@@ -2,7 +2,17 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { getAssignments, getNarration, ttsEnabledServerSide, ttsMp3Blob } from './api'
 import type { RolesToggle, Assignment } from './types'
 
-const defaultRoles: RolesToggle = { Merlin: true, Percival: true, Mordred: false, Morgana: true, Oberon: false }
+const defaultRoles: RolesToggle = {
+  Merlin: true, Percival: true, Mordred: false, Morgana: true, Oberon: false,
+  LadyOfTheLake: false, Cleric: false,
+  LancelotMode: 'off',
+  MessengerJunior: false, MessengerSenior: false, MessengerEvil: false,
+  RogueGood: false, RogueEvil: false,
+  SorcererGood: false, SorcererEvil: false,
+  Troublemaker: false, UntrustworthyServant: false, Apprentice: false,
+  Lunatic: false, Brute: false, Revealer: false, Trickster: false
+};
+
 
 function useBrowserTTS() {
   const speakingRef = useRef(false)
@@ -134,18 +144,141 @@ export default function App() {
             onChange={e => setPlayers(Math.max(5, Math.min(10, Number(e.target.value) || 5)))}
           />
 
-          <div className="roles">
-            {(Object.keys(roles) as (keyof RolesToggle)[]).map(k => (
-              <label key={k} className="chk">
+          {/* Base roles */}
+            <div className="roles">
+            {(['Merlin','Percival','Mordred','Morgana','Oberon'] as (keyof RolesToggle)[]).map(k => (
+                <label key={k} className="chk">
                 <input
-                  type="checkbox"
-                  checked={roles[k]}
-                  onChange={e => setRoles(r => ({ ...r, [k]: e.target.checked }))}
+                    type="checkbox"
+                    checked={roles[k] as unknown as boolean}
+                    onChange={e => setRoles(r => ({ ...r, [k]: e.target.checked }))}
                 />
                 <span>{k}</span>
-              </label>
+                </label>
             ))}
-          </div>
+            </div>
+
+            <hr style={{ opacity:.15, margin:'12px 0' }} />
+
+            {/* Advanced play (collapsible) */}
+            <details>
+            <summary style={{ cursor:'pointer', fontWeight:600 }}>Advanced play</summary>
+            <div style={{ marginTop:12 }}>
+
+                {/* Global modules */}
+                <div className="roles">
+                <label className="chk">
+                    <input type="checkbox" checked={roles.Cleric}
+                        onChange={e => setRoles(r => ({ ...r, Cleric: e.target.checked }))}/>
+                    <span>Cleric (leader check in reveal)</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.LadyOfTheLake}
+                        onChange={e => setRoles(r => ({ ...r, LadyOfTheLake: e.target.checked }))}/>
+                    <span>Lady of the Lake</span>
+                </label>
+                </div>
+
+                {/* Lancelots */}
+                <div className="row">
+                <label style={{ minWidth:110 }}>Lancelots</label>
+                <select value={roles.LancelotMode}
+                        onChange={e => setRoles(r => ({ ...r, LancelotMode: e.target.value as any }))}>
+                    <option value="off">Off</option>
+                    <option value="classic">Classic (know each other)</option>
+                    <option value="variant">Variant (don’t know; Evil thumbs only)</option>
+                </select>
+                </div>
+
+                {/* Messengers */}
+                <div className="roles" style={{ marginTop:8 }}>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.MessengerJunior}
+                        onChange={e => setRoles(r => ({ ...r, MessengerJunior: e.target.checked }))}/>
+                    <span>Junior Messenger (Good)</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.MessengerSenior}
+                        onChange={e => setRoles(r => ({ ...r, MessengerSenior: e.target.checked }))}/>
+                    <span>Senior Messenger (Good)</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.MessengerEvil}
+                        onChange={e => setRoles(r => ({ ...r, MessengerEvil: e.target.checked }))}/>
+                    <span>Evil Messenger</span>
+                </label>
+                </div>
+
+                {/* Rogues & Sorcerers */}
+                <div className="roles" style={{ marginTop:8 }}>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.RogueGood}
+                        onChange={e => setRoles(r => ({ ...r, RogueGood: e.target.checked }))}/>
+                    <span>Good Rogue (Success)</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.RogueEvil}
+                        onChange={e => setRoles(r => ({ ...r, RogueEvil: e.target.checked }))}/>
+                    <span>Evil Rogue (Fail, hidden)</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.SorcererGood}
+                        onChange={e => setRoles(r => ({ ...r, SorcererGood: e.target.checked }))}/>
+                    <span>Good Sorcerer (Magic)</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.SorcererEvil}
+                        onChange={e => setRoles(r => ({ ...r, SorcererEvil: e.target.checked }))}/>
+                    <span>Evil Sorcerer (Magic)</span>
+                </label>
+                </div>
+
+                {/* Good extras */}
+                <div className="roles" style={{ marginTop:8 }}>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.Troublemaker}
+                        onChange={e => setRoles(r => ({ ...r, Troublemaker: e.target.checked }))}/>
+                    <span>Troublemaker (may lie)</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.UntrustworthyServant}
+                        onChange={e => setRoles(r => ({ ...r, UntrustworthyServant: e.target.checked }))}/>
+                    <span>Untrustworthy Servant</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.Apprentice}
+                        onChange={e => setRoles(r => ({ ...r, Apprentice: e.target.checked }))}/>
+                    <span>Apprentice</span>
+                </label>
+                </div>
+
+                {/* Evil extras */}
+                <div className="roles" style={{ marginTop:8 }}>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.Lunatic}
+                        onChange={e => setRoles(r => ({ ...r, Lunatic: e.target.checked }))}/>
+                    <span>Lunatic (must Fail)</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.Brute}
+                        onChange={e => setRoles(r => ({ ...r, Brute: e.target.checked }))}/>
+                    <span>Brute (Fail only first 3)</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.Revealer}
+                        onChange={e => setRoles(r => ({ ...r, Revealer: e.target.checked }))}/>
+                    <span>Revealer (shows after 2nd fail)</span>
+                </label>
+                <label className="chk">
+                    <input type="checkbox" checked={roles.Trickster}
+                        onChange={e => setRoles(r => ({ ...r, Trickster: e.target.checked }))}/>
+                    <span>Trickster (may lie)</span>
+                </label>
+                </div>
+
+            </div>
+            </details>
+
 
           <div className="row">
             <button onClick={handleAssign}>Assign Roles</button>
