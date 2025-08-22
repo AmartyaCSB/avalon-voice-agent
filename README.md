@@ -1,3 +1,15 @@
+# Play the Narration for the Game of Avalon - The Resistance and Avalon - Bigbox version
+
+## TODO: 
+### 0) FAQs
+### 1) ElevenLabs or Smallest Voice TTS/Clone
+### 2) Server Rooms
+### 3) Discord Integration
+### 4) Fully functional Website to host realtime
+### 5) Chat Integration
+
+
+
 # Avalon Big Box — Quick Rulebook
 
 ## 1) Objective
