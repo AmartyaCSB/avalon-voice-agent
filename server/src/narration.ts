@@ -65,45 +65,78 @@ return shuffled.map((r, i) => ({ seat: i + 1, role: r.name, team: r.team }));
 }
 
 export function buildNarration(selected: RolesToggle, players: number) {
-const steps: string[] = [];
-steps.push(
-"Everyone, close your eyes and make a fist on the table.",
-"Minions of Mordred, except Oberon, open your eyes and look around to recognize one another.",
-);
-if (selected.Oberon) steps.push("Reminder: Oberon, keep your eyes closed and do not reveal yourself.");
-steps.push("Minions of Mordred, close your eyes.");
+  const steps: string[] = [];
+  const exceptText = (names: string[]) =>
+    names.length ? `, except ${names.join(" and ")},` : ",";
 
+  steps.push("Everyone, close your eyes and make a fist on the table.");
 
-if (selected.Merlin) {
-steps.push("Minions of Mordred, except Mordred and Oberon, extend your thumbs so Merlin can see you.");
-steps.push("Merlin, open your eyes and see the raised thumbs.");
-steps.push("Minions, put your thumbs down.");
-steps.push("Merlin, close your eyes.");
+  // Evil open-eyes: only exclude Oberon if he's selected
+  const evilOpenExclusions: string[] = [];
+  if (selected.Oberon) evilOpenExclusions.push("Oberon");
+  steps.push(
+    `Minions of Mordred${exceptText(evilOpenExclusions)} open your eyes and look around to recognize one another.`
+  );
+
+  // Oberon reminder only if Oberon exists
+  if (selected.Oberon) {
+    steps.push("Reminder: Oberon, keep your eyes closed and do not reveal yourself.");
+  }
+
+  steps.push("Minions of Mordred, close your eyes.");
+
+  // Merlin phase only if Merlin exists; exclude Mordred/Oberon only if present
+  if (selected.Merlin) {
+    const thumbExclusions: string[] = [];
+    if (selected.Mordred) thumbExclusions.push("Mordred");
+    if (selected.Oberon) thumbExclusions.push("Oberon");
+
+    steps.push(
+      `Minions of Mordred${thumbExclusions.length ? `, except ${thumbExclusions.join(" and ")},` : ""} extend your thumbs so Merlin can see you.`
+    );
+    steps.push("Merlin, open your eyes and see the raised thumbs.");
+    steps.push("Minions, put your thumbs down.");
+    steps.push("Merlin, close your eyes.");
+  }
+
+  // Percival sees Merlin/Morgana — mention only the ones that exist
+  if (selected.Percival && (selected.Merlin || selected.Morgana)) {
+    const who: string[] = [];
+    if (selected.Merlin) who.push("Merlin");
+    if (selected.Morgana) who.push("Morgana");
+    const whoText = who.join(" and ");
+
+    steps.push(`${whoText}, extend your thumbs.`);
+    steps.push("Percival, open your eyes and see the raised thumbs.");
+    steps.push(`${whoText}, put your thumbs down.`);
+    steps.push("Percival, close your eyes.");
+  }
+
+  steps.push("Everyone, open your eyes. The game begins.");
+
+  // Host notes — also conditionalized
+  const notes: string[] = [];
+  notes.push(`1) Evil${selected.Oberon ? " (no Oberon)" : ""} open eyes.`);
+  notes.push("2) Evil close.");
+
+  if (selected.Merlin) {
+    const parts: string[] = [];
+    if (selected.Mordred) parts.push("not Mordred");
+    if (selected.Oberon) parts.push("never Oberon");
+    notes.push(`3) Merlin sees evil thumbs${parts.length ? ` (${parts.join(", ")})` : ""}.`);
+  }
+
+  if (selected.Percival && (selected.Merlin || selected.Morgana)) {
+    const who: string[] = [];
+    if (selected.Merlin) who.push("Merlin");
+    if (selected.Morgana) who.push("Morgana");
+    notes.push(`4) Percival sees ${who.join(" + ")} thumbs.`);
+  }
+
+  notes.push("5) Wake up.");
+
+  return { steps, notes };
 }
-
-
-if (selected.Percival && (selected.Merlin || selected.Morgana)) {
-steps.push("Merlin and Morgana, extend your thumbs.");
-steps.push("Percival, open your eyes and see the raised thumbs.");
-steps.push("Merlin and Morgana, put your thumbs down.");
-steps.push("Percival, close your eyes.");
-}
-
-
-steps.push("Everyone, open your eyes. The game begins.");
-
-
-const notes: string[] = [];
-notes.push("1) Evil (no Oberon) open eyes.");
-notes.push("2) Evil close.");
-if (selected.Merlin) notes.push("3) Merlin sees evil thumbs (not Mordred, never Oberon).");
-if (selected.Percival && (selected.Merlin || selected.Morgana)) notes.push("4) Percival sees Merlin+Morgana thumbs.");
-notes.push("5) Wake up.");
-
-
-return { steps, notes };
-}
-
 
 
 
