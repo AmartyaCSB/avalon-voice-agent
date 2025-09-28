@@ -438,7 +438,7 @@ const QuestSystem: React.FC<QuestSystemProps> = ({ roomCode, players, currentLea
                   <div className="flex gap-4">
                     <button
                       onClick={() => voteOnMission('success')}
-                      disabled={user?.id in missionVotes}
+                      disabled={user?.id ? missionVotes[user.id] !== undefined : false}
                       className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
                     >
                       ✅ Success
@@ -446,14 +446,14 @@ const QuestSystem: React.FC<QuestSystemProps> = ({ roomCode, players, currentLea
                     {userTeam === 'Evil' && (
                       <button
                         onClick={() => voteOnMission('fail')}
-                        disabled={user?.id in missionVotes}
+                        disabled={user?.id ? missionVotes[user.id] !== undefined : false}
                         className="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
                       >
                         ❌ Fail
                       </button>
                     )}
                   </div>
-                  {user?.id in missionVotes && (
+                  {user?.id && missionVotes[user.id] && (
                     <p className="text-center text-green-400 mt-2 text-sm">
                       ✓ Your vote has been recorded
                     </p>
@@ -469,7 +469,7 @@ const QuestSystem: React.FC<QuestSystemProps> = ({ roomCode, players, currentLea
                     <div className="space-y-1">
                       {selectedTeam.map(playerId => {
                         const player = players.find(p => p.user_id === playerId)
-                        const hasVoted = playerId in missionVotes
+                        const hasVoted = missionVotes[playerId] !== undefined
                         return (
                           <div key={playerId} className="flex justify-between items-center">
                             <span className="text-blue-200">
