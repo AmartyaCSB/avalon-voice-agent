@@ -1,73 +1,35 @@
-export const faqMarkdown = `# Avalon Voice Agent — FAQ
+export const faqMarkdown = `
+## Frequently Asked Questions
 
-## Team sizes (seats)
-| Players | Good | Evil |
-|---:|---:|---:|
-| 5 | 3 | 2 |
-| 6 | 4 | 2 |
-| 7 | 4 | 3 |
-| 8 | 5 | 3 |
-| 9 | 6 | 3 |
-| 10 | 6 | 4 |
+### What is Avalon?
+Avalon is a social deduction game where players are divided into two teams: the loyal servants of Arthur (Good) and the minions of Mordred (Evil). The Good team tries to complete three quests successfully, while the Evil team tries to sabotage them.
 
-> "Seats" = total slots for each side. You can't select more special roles than the seats for that side (Assassin is always included for Evil).
+### How many players can play?
+Avalon supports 5-10 players. The team composition changes based on player count:
+- 5 players: 3 Good, 2 Evil
+- 6 players: 4 Good, 2 Evil  
+- 7 players: 4 Good, 3 Evil
+- 8 players: 5 Good, 3 Evil
+- 9 players: 6 Good, 3 Evil
+- 10 players: 6 Good, 4 Evil
 
----
+### What are the basic roles?
+- **Merlin**: Knows who the Evil players are (except Mordred)
+- **Percival**: Knows who Merlin and Morgana are, but not which is which
+- **Mordred**: Evil player hidden from Merlin
+- **Morgana**: Evil player who appears as Merlin to Percival
+- **Oberon**: Evil player hidden from other Evil players
+- **Assassin**: Always present Evil player who can kill Merlin at the end
 
-## Reveal order (base)
-1. Everyone close eyes, fist in front.
-2. **Evil** (not Oberon) open eyes / look around; then close.
-3. **Merlin** opens eyes to see Evil (not Mordred).
-4. **Percival** opens eyes to see **Merlin-or-Morgana**; then close.
-5. Everyone open eyes; game begins.
+### How does the game work?
+1. Players receive secret roles
+2. Evil players (except Oberon) learn who each other are
+3. Merlin learns who the Evil players are (except Mordred)
+4. Players go on quests, with the leader proposing team members
+5. Teams are voted on by all players
+6. Quest members secretly choose to succeed or fail the quest
+7. Good wins by completing 3 quests; Evil wins by failing 3 quests or assassinating Merlin
 
-### If these modules are active
-- **Cleric**: before Evil reveal, Leader extends thumb if Evil. (Variant per booklet page 11.)
-- **Lancelots (classic)**: both Lancelots extend thumbs so each knows the other.
-- **Lancelots (variant)**: Evil Lancelot extends thumb only; Good Lancelot keeps eyes closed.
-- **Messengers**: Senior knows Junior; Evil Messenger is hidden (see booklet pages 14–15).
-- **Untrustworthy Servant**: shown the Assassin after 3 Good quests; may flip sides if recruited (p.16).
-- Others do not change reveal, but affect quest play (Rogues, Sorcerers, Brute, Lunatic, Revealer, Trickster, Lady of the Lake).
-
----
-
-## Common questions
-
-**Q. Can I pick Percival without Merlin/Morgana?**  
-A. Yes, but Percival sees nobody; you’ll get a warning.
-
-**Q. Oberon with 5 players?**  
-A. Allowed if Evil seats permit; remember Oberon is unknown to Evil and vice-versa.
-
-**Q. Mordred hides from Merlin — does Percival still see two?**  
-A. Percival sees Merlin **or** Morgana (whoever is present as the “Merlin signal”), regardless of Mordred.
-
-**Q. When does the Assassination happen?**  
-A. After 3 successful quests, Evil may attempt to assassinate Merlin. If correct, Evil wins.
-
-**Q. Lancelot switching (variant)?**  
-A. Draw a Switch Allegiance card at the start of a quest as per booklet; Good Lancelot must always play Success, Evil Lancelot must play Fail.
-
-**Q. Rogue module?**  
-A. Good Rogue (one player) may play a **Rogue Success** card, Evil Rogue (one player) may play a **Rogue Fail** card. Rogues are not known to Evil nor to each other; details per booklet p.13.
-
-**Q. Sorcerers & Magic cards?**  
-A. Both sides may have a Sorcerer. Magic reverses the quest result; Evil Sorcerer may only play Success/Fail per booklet rules (p.14).
-
-**Q. Lady of the Lake?**  
-A. After quests 2–4 resolve, holder may check a player’s **loyalty card** (not role); token passes (p.17).
-
-**Q. Cleric?**  
-A. During reveal the Cleric learns whether the Leader is Good or Evil (p.11).
-
----
-
-## Quick legality checks (rules of thumb)
-- **Good selected ≤ Good seats** and **Evil selected ≤ Evil seats**.
-- **Assassin is always counted as an Evil role.**
-- **Lancelots** are taken as a pair (Good+Evil).
-- **Messengers**: adding Senior without Junior is allowed but pointless (you’ll see a warning).
-- **Untrustworthy Servant** is Good at start, appears Evil to Merlin, and knows the Assassin after 3 Good quests.
-
-For full text, open **Extended Rules** in the next tab.
+### What are Advanced roles?
+Advanced roles add complexity and variety to the game. They include special abilities, different win conditions, and unique interactions that create more strategic depth.
 `;

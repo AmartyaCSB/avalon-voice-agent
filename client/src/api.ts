@@ -1,44 +1,34 @@
 import type { RolesToggle } from "./types";
-import { assignRoles, buildNarration } from "./logic";
 
-const SERVER = import.meta.env.VITE_SERVER_URL?.trim();
-const USE_SERVER_TTS = (import.meta.env.VITE_USE_SERVER_TTS ?? "").toLowerCase() === "true";
-
-export const ttsEnabledServerSide = () => !!SERVER && USE_SERVER_TTS;
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8787';
 
 export async function getAssignments(players: number, roles: RolesToggle) {
-  if (SERVER) {
-    const r = await fetch(`${SERVER}/api/assign`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ players, roles })
-    });
-    if (!r.ok) throw new Error(await r.text());
-    return r.json();
-  }
-  const assignments = assignRoles(players, roles);
-  const good = assignments.filter(a => a.team === "Good").length;
-  const evil = assignments.length - good;
-  return { assignments, good, evil };
+  const response = await fetch(`${SERVER_URL}/api/assign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ players, roles })
+  });
+  return response.json();
 }
 
 export async function getNarration(players: number, roles: RolesToggle) {
-  if (SERVER) {
-    const r = await fetch(`${SERVER}/api/narration`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ players, roles })
-    });
-    if (!r.ok) throw new Error(await r.text());
-    return r.json();
-  }
-  return buildNarration(roles, players);
+  const response = await fetch(`${SERVER_URL}/api/narration`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ players, roles })
+  });
+  return response.json();
+}
+
+export function ttsEnabledServerSide(): boolean {
+  return !!import.meta.env.VITE_SERVER_URL;
 }
 
 export async function ttsMp3Blob(text: string): Promise<Blob> {
-  if (!SERVER) throw new Error("Server TTS not configured");
-  const r = await fetch(`${SERVER}/api/tts`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
+  const response = await fetch(`${SERVER_URL}/api/tts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text })
   });
-  if (!r.ok) throw new Error(await r.text());
-  return r.blob();
+  return response.blob();
 }
