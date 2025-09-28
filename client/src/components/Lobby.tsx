@@ -263,40 +263,6 @@ const Lobby: React.FC = () => {
             </div>
           </div>
         </div>
-                    <div key={player.id} className="bg-white/5 rounded-lg p-3 flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                        {player.player_profiles?.persona_name?.charAt(0) || '?'}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-white font-medium text-sm">
-                            {player.player_profiles?.persona_name || 'Unknown Player'}
-                          </p>
-                          {currentRoom.host_id === player.user_id && (
-                            <span className="bg-yellow-600 text-yellow-100 text-xs px-1 py-0.5 rounded">
-                              HOST
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-blue-200 text-xs">
-                          {player.player_profiles?.preferred_role || 'No preference'}
-                        </p>
-                      </div>
-                      {/* Kick button for host (can't kick themselves) */}
-                      {currentRoom.host_id === user.id && player.user_id !== user.id && (
-                        <button
-                          onClick={() => kickPlayer(player.user_id)}
-                          className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition-colors"
-                          title="Remove player"
-                        >
-                          👢
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
 
             {/* Enhanced Chat Area */}
             <div className="lg:col-span-1">
