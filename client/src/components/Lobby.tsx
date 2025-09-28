@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useLobby } from '../contexts/LobbyContext'
@@ -10,11 +10,14 @@ const Lobby: React.FC = () => {
     rooms, 
     currentRoom, 
     roomPlayers, 
+    chatMessages,
     loading, 
     createRoom, 
     joinRoom, 
     leaveRoom, 
-    refreshRooms 
+    refreshRooms,
+    sendMessage,
+    loadChatMessages
   } = useLobby()
   
   const [showCreateRoom, setShowCreateRoom] = useState(false)
@@ -22,6 +25,8 @@ const Lobby: React.FC = () => {
   const [maxPlayers, setMaxPlayers] = useState(10)
   const [joinCode, setJoinCode] = useState('')
   const [showJoinRoom, setShowJoinRoom] = useState(false)
+  const [chatMessage, setChatMessage] = useState('')
+  const chatMessagesRef = useRef<HTMLDivElement>(null)
 
   // Refresh rooms periodically
   useEffect(() => {
@@ -54,6 +59,28 @@ const Lobby: React.FC = () => {
   const handleLeaveRoom = async () => {
     await leaveRoom()
   }
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!chatMessage.trim()) return
+
+    await sendMessage(chatMessage)
+    setChatMessage('')
+  }
+
+  // Load chat messages when entering a room
+  useEffect(() => {
+    if (currentRoom) {
+      loadChatMessages(currentRoom.id)
+    }
+  }, [currentRoom, loadChatMessages])
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight
+    }
+  }, [chatMessages])
 
   if (!user) {
     return (
@@ -107,26 +134,26 @@ const Lobby: React.FC = () => {
             </div>
           </div>
 
-          {/* Room Info */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Room Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Players List */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-1">
               <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6">
                 <h2 className="text-xl font-semibold text-white mb-4">
                   Players ({roomPlayers.length}/{currentRoom.max_players})
                 </h2>
                 <div className="space-y-3">
                   {roomPlayers.map((player) => (
-                    <div key={player.id} className="bg-white/5 rounded-lg p-4 flex items-center gap-4">
-                      <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    <div key={player.id} className="bg-white/5 rounded-lg p-3 flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                         {player.player_profiles?.persona_name?.charAt(0) || '?'}
                       </div>
                       <div>
-                        <p className="text-white font-medium">
+                        <p className="text-white font-medium text-sm">
                           {player.player_profiles?.persona_name || 'Unknown Player'}
                         </p>
-                        <p className="text-blue-200 text-sm">
-                          {player.player_profiles?.persona_description || 'No description'}
+                        <p className="text-blue-200 text-xs">
+                          {player.player_profiles?.preferred_role || 'No preference'}
                         </p>
                       </div>
                     </div>
@@ -135,12 +162,61 @@ const Lobby: React.FC = () => {
               </div>
             </div>
 
-            {/* Room Settings */}
-            <div className="space-y-6">
+            {/* Chat Area */}
+            <div className="lg:col-span-2">
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 h-96">
+                <h2 className="text-xl font-semibold text-white mb-4">Room Chat</h2>
+                
+                {/* Chat Messages */}
+                <div 
+                  ref={chatMessagesRef}
+                  className="bg-white/5 rounded-lg p-4 h-64 overflow-y-auto mb-4 space-y-2"
+                >
+                  {chatMessages.length === 0 ? (
+                    <p className="text-blue-200 text-center py-8">No messages yet. Start the conversation!</p>
+                  ) : (
+                    chatMessages.map((message) => (
+                      <div key={message.id} className="bg-white/5 rounded p-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-purple-300 font-medium text-sm">
+                            {message.users?.display_name || 'Unknown'}
+                          </span>
+                          <span className="text-blue-300 text-xs">
+                            {new Date(message.created_at).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <p className="text-white text-sm">{message.message}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Chat Input */}
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatMessage}
+                    onChange={(e) => setChatMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            {/* Room Settings & Controls */}
+            <div className="lg:col-span-1 space-y-6">
               <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Room Settings</h3>
-                <div className="space-y-3 text-blue-200">
-                  <p><span className="font-medium">Max Players:</span> {currentRoom.max_players}</p>
+                <h3 className="text-lg font-semibold text-white mb-4">Room Info</h3>
+                <div className="space-y-3 text-blue-200 text-sm">
+                  <p><span className="font-medium">Code:</span> <span className="font-mono text-yellow-300">{currentRoom.room_code}</span></p>
+                  <p><span className="font-medium">Max:</span> {currentRoom.max_players}</p>
                   <p><span className="font-medium">Status:</span> {currentRoom.status}</p>
                   <p><span className="font-medium">Created:</span> {new Date(currentRoom.created_at).toLocaleDateString()}</p>
                 </div>
@@ -151,12 +227,28 @@ const Lobby: React.FC = () => {
                   <h3 className="text-lg font-semibold text-white mb-4">Host Controls</h3>
                   <button
                     disabled={roomPlayers.length < 5}
-                    className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+                    className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors mb-3"
                   >
                     Start Game ({roomPlayers.length}/5+ required)
                   </button>
+                  <button
+                    onClick={() => {/* TODO: Implement voice agent integration */}}
+                    className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    🎤 Voice Narration
+                  </button>
                 </div>
               )}
+
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Game Rules</h3>
+                <div className="text-blue-200 text-sm space-y-2">
+                  <p>• 5-10 players required</p>
+                  <p>• Good vs Evil teams</p>
+                  <p>• Complete 3 quests to win</p>
+                  <p>• Use voice narration for role reveals</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -195,20 +287,71 @@ const Lobby: React.FC = () => {
             onClick={() => setShowCreateRoom(true)}
             className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold"
           >
-            Create Room
+            🏠 Create Room
           </button>
           <button
             onClick={() => setShowJoinRoom(true)}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
           >
-            Join Room
+            🚪 Join Room
           </button>
           <button
             onClick={refreshRooms}
             className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-semibold"
           >
-            Refresh
+            🔄 Refresh
           </button>
+        </div>
+
+        {/* Available Rooms */}
+        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6">
+          <h2 className="text-2xl font-semibold text-white mb-6">Available Rooms</h2>
+          {rooms.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🎲</div>
+              <p className="text-blue-200 text-lg mb-4">No active rooms found</p>
+              <p className="text-blue-300">Create the first room to start playing!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {rooms.map((room) => (
+                <div key={room.id} className="bg-white/5 backdrop-blur rounded-xl p-6 hover:bg-white/10 transition-colors">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-xl font-semibold text-white">{room.room_name}</h3>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      room.status === 'waiting' ? 'bg-green-600 text-white' :
+                      room.status === 'playing' ? 'bg-yellow-600 text-white' :
+                      'bg-gray-600 text-white'
+                    }`}>
+                      {room.status}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2 mb-4">
+                    <p className="text-blue-200 text-sm">
+                      <span className="font-medium">Players:</span> {room.current_players}/{room.max_players}
+                    </p>
+                    <p className="text-blue-200 text-sm">
+                      <span className="font-medium">Code:</span> 
+                      <span className="font-mono text-yellow-300 ml-1">{room.room_code}</span>
+                    </p>
+                    <p className="text-blue-200 text-sm">
+                      <span className="font-medium">Created:</span> {new Date(room.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => joinRoom(room.room_code)}
+                    disabled={room.current_players >= room.max_players || room.status !== 'waiting'}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {room.current_players >= room.max_players ? 'Room Full' : 
+                     room.status !== 'waiting' ? 'Game In Progress' : 'Join Room'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Create Room Modal */}
