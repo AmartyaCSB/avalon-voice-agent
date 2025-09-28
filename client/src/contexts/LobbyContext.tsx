@@ -574,6 +574,29 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [currentRoom])
 
+  // Generate role assignments for players
+  const generateRoleAssignments = (playerCount: number) => {
+    const roles = {
+      5: { good: ['Merlin', 'Percival', 'Loyal Servant'], evil: ['Morgana', 'Assassin'] },
+      6: { good: ['Merlin', 'Percival', 'Loyal Servant', 'Loyal Servant'], evil: ['Morgana', 'Assassin'] },
+      7: { good: ['Merlin', 'Percival', 'Loyal Servant', 'Loyal Servant'], evil: ['Morgana', 'Assassin', 'Oberon'] },
+      8: { good: ['Merlin', 'Percival', 'Loyal Servant', 'Loyal Servant', 'Loyal Servant'], evil: ['Morgana', 'Assassin', 'Oberon'] },
+      9: { good: ['Merlin', 'Percival', 'Loyal Servant', 'Loyal Servant', 'Loyal Servant', 'Loyal Servant'], evil: ['Morgana', 'Assassin', 'Oberon'] },
+      10: { good: ['Merlin', 'Percival', 'Loyal Servant', 'Loyal Servant', 'Loyal Servant', 'Loyal Servant'], evil: ['Morgana', 'Assassin', 'Oberon', 'Mordred'] }
+    }
+
+    const gameRoles = roles[playerCount as keyof typeof roles] || roles[5]
+    const allRoles = [...gameRoles.good.map(role => ({ role, team: 'Good' })), ...gameRoles.evil.map(role => ({ role, team: 'Evil' }))]
+    
+    // Shuffle roles
+    for (let i = allRoles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allRoles[i], allRoles[j]] = [allRoles[j], allRoles[i]]
+    }
+
+    return allRoles
+  }
+
   // Start the game (host only)
   const startGame = async (): Promise<boolean> => {
     if (!user || !currentRoom || currentRoom.host_id !== user.id) {
@@ -587,6 +610,20 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     try {
+      // Generate role assignments
+      const roleAssignments = generateRoleAssignments(roomPlayers.length)
+      
+      // Create assignments array with player data
+      const assignments = roomPlayers.map((player, index) => ({
+        room_id: currentRoom.id,
+        user_id: player.user_id,
+        role_name: roleAssignments[index].role,
+        team: roleAssignments[index].team
+      }))
+
+      // Save role assignments to database
+      await saveRoleAssignments(currentRoom.id, assignments)
+
       // Update room status to playing
       const { error: updateError } = await supabase
         .from('game_rooms')
@@ -595,17 +632,16 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (updateError) throw updateError
 
-      // Send system message
-      await sendMessage(`🎮 Game started! ${roomPlayers.length} players ready.`, 'system')
-
-      // Initialize game state in database
-      await supabase.rpc('initialize_game_state', {
-        room_id_param: currentRoom.id,
-        player_count: roomPlayers.length
+      // Initialize game state
+      await saveGameState({
+        current_quest: 0,
+        game_phase: 'team_selection',
+        good_wins: 0,
+        evil_wins: 0
       })
 
-      // Navigate to voice agent for role assignment
-      window.location.href = `/voice-agent?room=${currentRoom.room_code}&players=${roomPlayers.length}`
+      // Send system message with role assignments
+      await sendMessage(`🎮 Game started! Roles have been assigned. The quest begins now!`, 'system')
 
       return true
     } catch (error) {

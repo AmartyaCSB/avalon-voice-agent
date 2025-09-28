@@ -10,7 +10,7 @@ interface CircularGameRoomProps {
 
 const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, isHost }) => {
   const { user } = useAuth()
-  const { currentRoom, sendMessage, chatMessages } = useLobby()
+  const { currentRoom, sendMessage, chatMessages, startGame } = useLobby()
   const [chatInput, setChatInput] = useState('')
   const [showChat, setShowChat] = useState(false)
 
@@ -31,13 +31,33 @@ const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, 
     e.preventDefault()
     if (!chatInput.trim()) return
     
-    await sendMessage(chatInput.trim(), 'general')
-    setChatInput('')
+    try {
+      console.log('Sending message:', chatInput.trim())
+      await sendMessage(chatInput.trim(), 'general')
+      setChatInput('')
+      console.log('Message sent successfully')
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      alert('Failed to send message. Please try again.')
+    }
   }
 
-  const handleStartGame = () => {
-    // Navigate to voice agent for role assignment
-    window.location.href = `/voice-agent?room=${roomCode}&players=${players.length}`
+  const handleStartGame = async () => {
+    try {
+      console.log('Starting game for room:', roomCode)
+      const success = await startGame()
+      
+      if (success) {
+        console.log('Game started successfully')
+        // The lobby context will handle the room status change
+        // and the parent component will render QuestSystem
+      } else {
+        alert('Failed to start game. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error starting game:', error)
+      alert('Failed to start game. Please try again.')
+    }
   }
 
   return (
