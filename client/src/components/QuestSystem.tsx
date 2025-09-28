@@ -511,9 +511,9 @@ const QuestSystem: React.FC<QuestSystemProps> = ({ roomCode, players, currentLea
           <p>• On quests, Good players must play Success, Evil players may play Success or Fail</p>
           <p>• If team votes fail 5 times in a row, Evil wins</p>
         </div>
-        </div>
       </div>
     </div>
+  </div>
   )
 }
 
