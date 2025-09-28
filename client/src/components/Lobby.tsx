@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useLobby } from '../contexts/LobbyContext'
 import QuestSystem from './QuestSystem'
+import CircularGameRoom from './CircularGameRoom'
 
 const Lobby: React.FC = () => {
   const { user, signInWithGoogle, signOut } = useAuth()
@@ -137,55 +138,13 @@ const Lobby: React.FC = () => {
     
     console.log('Rendering CircularGameRoom for room:', currentRoom.room_code)
     
-    // Temporary: Force render a simple test instead of CircularGameRoom
+    // Render the circular game room
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-900 via-amber-800 to-amber-900 flex items-center justify-center">
-        <div className="text-center text-white">
-          <h1 className="text-4xl font-bold mb-4">🏰 Round Table</h1>
-          <p className="text-xl mb-2">Room: {currentRoom.room_code}</p>
-          <p className="text-lg mb-4">Players: {roomPlayers.length}</p>
-          <p className="text-amber-200 mb-6">Circular layout coming soon!</p>
-          
-          {/* Host Controls */}
-          {currentRoom.host_id === user.id && (
-            <div className="space-y-4">
-              <div className="bg-black/20 rounded-lg p-4 max-w-md mx-auto">
-                <h3 className="text-xl font-semibold mb-4">👑 Host Controls</h3>
-                <div className="space-y-3">
-                  <button
-                    onClick={handleLeaveRoom}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors"
-                  >
-                    🚪 Leave Room
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (window.confirm(`Are you sure you want to delete the room "${currentRoom.room_name}"? This action cannot be undone.`)) {
-                        const success = await deleteRoom(currentRoom.id)
-                        if (success) {
-                          navigate('/lobby')
-                        }
-                      }
-                    }}
-                    className="w-full bg-red-800 hover:bg-red-900 text-white py-2 px-4 rounded-lg transition-colors border border-red-600"
-                  >
-                    🗑️ Delete Room
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {currentRoom.host_id !== user.id && (
-            <button
-              onClick={handleLeaveRoom}
-              className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-6 rounded-lg transition-colors"
-            >
-              🚪 Leave Room
-            </button>
-          )}
-        </div>
-      </div>
+      <CircularGameRoom 
+        roomCode={currentRoom.room_code}
+        players={roomPlayers}
+        isHost={currentRoom.host_id === user.id}
+      />
     )
   }
 
