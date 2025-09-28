@@ -23,7 +23,8 @@ const Lobby: React.FC = () => {
     sendMessage,
     loadChatMessages,
     startGame,
-    kickPlayer
+    kickPlayer,
+    deleteRoom
   } = useLobby()
   
   const [showCreateRoom, setShowCreateRoom] = useState(false)
@@ -181,8 +182,47 @@ const Lobby: React.FC = () => {
         <div className="text-center text-white">
           <h1 className="text-4xl font-bold mb-4">🏰 Round Table</h1>
           <p className="text-xl mb-2">Room: {currentRoom.room_code}</p>
-          <p className="text-lg">Players: {roomPlayers.length}</p>
-          <p className="text-amber-200 mt-4">Circular layout coming soon!</p>
+          <p className="text-lg mb-4">Players: {roomPlayers.length}</p>
+          <p className="text-amber-200 mb-6">Circular layout coming soon!</p>
+          
+          {/* Host Controls */}
+          {currentRoom.host_id === user.id && (
+            <div className="space-y-4">
+              <div className="bg-black/20 rounded-lg p-4 max-w-md mx-auto">
+                <h3 className="text-xl font-semibold mb-4">👑 Host Controls</h3>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleLeaveRoom}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors"
+                  >
+                    🚪 Leave Room
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (window.confirm(`Are you sure you want to delete the room "${currentRoom.room_name}"? This action cannot be undone.`)) {
+                        const success = await deleteRoom(currentRoom.id)
+                        if (success) {
+                          navigate('/lobby')
+                        }
+                      }
+                    }}
+                    className="w-full bg-red-800 hover:bg-red-900 text-white py-2 px-4 rounded-lg transition-colors border border-red-600"
+                  >
+                    🗑️ Delete Room
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {currentRoom.host_id !== user.id && (
+            <button
+              onClick={handleLeaveRoom}
+              className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-6 rounded-lg transition-colors"
+            >
+              🚪 Leave Room
+            </button>
+          )}
         </div>
       </div>
     )
@@ -557,6 +597,22 @@ const Lobby: React.FC = () => {
                       >
                         🔗
                       </button>
+                      {room.host?.id === user.id && (
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(`Are you sure you want to delete the room "${room.room_name}"? This action cannot be undone.`)) {
+                              const success = await deleteRoom(room.id)
+                              if (success) {
+                                await refreshRooms()
+                              }
+                            }
+                          }}
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition-colors"
+                          title="Delete room (Host only)"
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
                 </div>
               ))}

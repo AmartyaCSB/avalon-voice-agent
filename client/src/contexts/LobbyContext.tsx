@@ -34,6 +34,7 @@ interface LobbyContextType {
   loadChatMessages: (roomId: string) => Promise<void>
   startGame: () => Promise<boolean>
   kickPlayer: (playerId: string) => Promise<boolean>
+  deleteRoom: (roomId: string) => Promise<boolean>
   saveGameState: (gameState: any) => Promise<void>
   loadGameState: (roomId: string) => Promise<any>
   saveRoleAssignments: (roomId: string, assignments: any[]) => Promise<void>
@@ -294,13 +295,45 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }
 
+  // Clean up inactive rooms
+  const cleanupInactiveRooms = async () => {
+    try {
+      console.log('Running room cleanup...')
+      const { data, error } = await supabase.rpc('cleanup_inactive_rooms')
+      
+      if (error) {
+        console.error('Cleanup error:', error)
+        return 0
+      }
+      
+      const cleanedCount = data || 0
+      if (cleanedCount > 0) {
+        console.log(`Cleaned up ${cleanedCount} inactive rooms`)
+      }
+      return cleanedCount
+    } catch (error) {
+      console.error('Error during room cleanup:', error)
+      return 0
+    }
+  }
+
   // Refresh available rooms
   const refreshRooms = async () => {
     try {
       setLoading(true)
+      
+      // Clean up inactive rooms first
+      await cleanupInactiveRooms()
+      
       const { data: rooms, error } = await supabase
         .from('game_rooms')
-        .select('*')
+        .select(`
+          *,
+          host:users!game_rooms_host_id_fkey (
+            id,
+            display_name
+          )
+        `)
         .eq('status', 'waiting')
         .order('created_at', { ascending: false })
         .limit(20)
@@ -610,6 +643,41 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }
 
+  // Delete a room (host only)
+  const deleteRoom = async (roomId: string): Promise<boolean> => {
+    if (!user || !currentRoom || currentRoom.host_id !== user.id) {
+      console.error('Only the host can delete the room')
+      return false
+    }
+
+    try {
+      console.log('Deleting room:', roomId)
+      
+      // Delete the room (cascade deletes will handle related data)
+      const { error } = await supabase
+        .from('game_rooms')
+        .delete()
+        .eq('id', roomId)
+
+      if (error) throw error
+
+      // Clear current room state
+      setCurrentRoom(null)
+      setRoomPlayers([])
+      setChatMessages([])
+      
+      // Send success message and refresh rooms
+      alert('Room deleted successfully!')
+      await refreshRooms()
+      
+      return true
+    } catch (error) {
+      console.error('Error deleting room:', error)
+      alert('Failed to delete room. Please try again.')
+      return false
+    }
+  }
+
   // Save game state to database
   const saveGameState = async (gameState: any) => {
     if (!currentRoom) return
@@ -716,6 +784,7 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     loadChatMessages,
     startGame,
     kickPlayer,
+    deleteRoom,
     saveGameState,
     loadGameState,
     saveRoleAssignments,
