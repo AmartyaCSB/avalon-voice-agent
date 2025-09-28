@@ -1,43 +1,79 @@
 import React, { useState } from 'react'
 import AvalonVoiceAgent from './components/AvalonVoiceAgent'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { LobbyProvider } from './contexts/LobbyContext'
+import PlayerProfile from './components/PlayerProfile'
+import Lobby from './components/Lobby'
 import './styles.css'
 
-function App() {
-  const [isSignedIn, setIsSignedIn] = useState(false)
+function AppContent() {
+  const { user, signInWithGoogle, signOut, loading } = useAuth()
   const [showLobby, setShowLobby] = useState(false)
   const [showVoiceAgent, setShowVoiceAgent] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
 
-  const handleGoogleSignIn = () => {
-    // Simulate Google sign-in for now
-    alert('🎉 Google Sign-In clicked! (Demo mode)')
-    setIsSignedIn(true)
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle()
+    } catch (error) {
+      console.error('Sign in failed:', error)
+      alert('Sign in failed. Please try again.')
+    }
   }
 
   const handleEnterLobby = () => {
     setShowLobby(true)
   }
 
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚔️</div>
+          <p>Loading Avalon...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (showVoiceAgent) {
     return <AvalonVoiceAgent onBack={() => setShowVoiceAgent(false)} />
   }
 
+  if (showProfile) {
+    return <PlayerProfile onBack={() => setShowProfile(false)} />
+  }
+
   if (showLobby) {
-  return (
-      <div style={{ 
-        minHeight: '100vh', 
+    return <Lobby onBack={() => setShowLobby(false)} />
+  }
+
+  if (user) {
+    return (
+      <div style={{
+        minHeight: '100vh',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '2rem',
         color: 'white',
-        fontFamily: 'Arial, sans-serif'
+        fontFamily: 'Arial, sans-serif',
+        padding: '2rem'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          {/* Header with user info */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
             <div>
-              <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎮 Avalon Lobby</h1>
-              <p style={{ opacity: 0.9 }}>Welcome back! Ready to create or join a game?</p>
-          </div>
-            <button 
-              onClick={() => setShowLobby(false)}
+              <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Welcome back, {user.user_metadata?.full_name || user.email}! 👋</h1>
+              <p style={{ opacity: 0.9 }}>Ready to play Avalon?</p>
+            </div>
+            <button
+              onClick={signOut}
               style={{
                 background: '#6b7280',
                 color: 'white',
@@ -48,90 +84,76 @@ function App() {
                 fontSize: '1rem'
               }}
             >
-              Back to Home
+              Sign Out
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-            <div style={{ 
-              background: 'rgba(255,255,255,0.1)', 
-              padding: '2rem', 
+          {/* Main actions */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '3rem' }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.1)',
+              padding: '2rem',
               borderRadius: '12px',
               backdropFilter: 'blur(10px)',
               textAlign: 'center'
             }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🏠 Create Room</h3>
-              <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>Start a new Avalon game and invite friends</p>
-              <button style={{
-                background: '#16a34a',
-                color: 'white',
-                border: 'none',
-                padding: '0.75rem 2rem',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600'
-              }}>
-                Create New Room
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🎮 Game Lobby</h3>
+              <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>Create or join multiplayer games</p>
+              <button
+                onClick={handleEnterLobby}
+                style={{
+                  background: '#16a34a',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 2rem',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  width: '100%'
+                }}
+              >
+                Enter Lobby
               </button>
             </div>
 
-            <div style={{ 
-              background: 'rgba(255,255,255,0.1)', 
-              padding: '2rem', 
+            <div style={{
+              background: 'rgba(255,255,255,0.1)',
+              padding: '2rem',
               borderRadius: '12px',
               backdropFilter: 'blur(10px)',
               textAlign: 'center'
             }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🚪 Join Room</h3>
-              <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>Enter a room code to join an existing game</p>
-              <button style={{
-                background: '#2563eb',
-                color: 'white',
-                border: 'none',
-                padding: '0.75rem 2rem',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600'
-              }}>
-                Join with Code
-              </button>
-            </div>
-
-            <div style={{ 
-              background: 'rgba(255,255,255,0.1)', 
-              padding: '2rem', 
-              borderRadius: '12px',
-              backdropFilter: 'blur(10px)',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>👤 My Profile</h3>
-              <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>Manage your player personas and stats</p>
-              <button style={{
-                background: '#9333ea',
-                color: 'white',
-                border: 'none',
-                padding: '0.75rem 2rem',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600'
-              }}>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>👤 My Profiles</h3>
+              <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>Manage your player personas</p>
+              <button
+                onClick={() => setShowProfile(true)}
+                style={{
+                  background: '#9333ea',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 2rem',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  width: '100%'
+                }}
+              >
                 Manage Profiles
               </button>
-              </div>
+            </div>
 
-            <div style={{ 
-              background: 'rgba(255,255,255,0.1)', 
-              padding: '2rem', 
+            <div style={{
+              background: 'rgba(255,255,255,0.1)',
+              padding: '2rem',
               borderRadius: '12px',
               backdropFilter: 'blur(10px)',
               textAlign: 'center'
             }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🎤 AI Voice Narration</h3>
-              <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>Create role assignments and AI-powered narration</p>
-              <button 
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🎤 Voice Narration</h3>
+              <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>AI-powered game narration</p>
+              <button
                 onClick={() => setShowVoiceAgent(true)}
                 style={{
                   background: '#dc2626',
@@ -141,66 +163,16 @@ function App() {
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '1rem',
-                  fontWeight: '600'
+                  fontWeight: '600',
+                  width: '100%'
                 }}
               >
                 Voice Agent
               </button>
             </div>
           </div>
-
-          <div style={{ 
-            background: 'rgba(255,255,255,0.1)', 
-            padding: '2rem', 
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)',
-            marginTop: '2rem'
-          }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🎯 Available Rooms</h3>
-            <p style={{ opacity: 0.8, textAlign: 'center', padding: '2rem' }}>
-              No active rooms found. Create one to get started!
-            </p>
-              </div>
-              </div>
-              </div>
-    )
-  }
-
-  if (isSignedIn) {
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        fontFamily: 'Arial, sans-serif'
-      }}>
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>
-            Welcome back! 👋
-          </h1>
-          <p style={{ fontSize: '1.2rem', marginBottom: '2rem', opacity: 0.9 }}>
-            Ready to play Avalon?
-          </p>
-            <button
-            onClick={handleEnterLobby}
-            style={{
-              background: '#16a34a',
-              color: 'white',
-              border: 'none',
-              padding: '1rem 2rem',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              fontSize: '1.2rem',
-              fontWeight: '600'
-            }}
-          >
-            🎮 Enter Lobby
-            </button>
-              </div>
-            </div>
+        </div>
+      </div>
     )
   }
 
@@ -346,6 +318,16 @@ function App() {
         </div>
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <LobbyProvider>
+        <AppContent />
+      </LobbyProvider>
+    </AuthProvider>
   )
 }
 
