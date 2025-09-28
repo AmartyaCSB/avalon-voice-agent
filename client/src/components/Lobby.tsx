@@ -67,7 +67,11 @@ const Lobby: React.FC = () => {
 
     try {
       console.log('Creating room:', roomName, 'Max players:', maxPlayers)
+      console.log('Current loading state:', loading)
+      
       const room = await createRoom(roomName, maxPlayers)
+      
+      console.log('Create room result:', room)
       
       if (room) {
         console.log('Room created successfully:', room)
@@ -78,11 +82,11 @@ const Lobby: React.FC = () => {
         navigate(`/room/${room.room_code}`)
       } else {
         console.error('Failed to create room - returned null')
-        alert('Failed to create room. Please try again.')
+        alert('Failed to create room. This might be a database connection issue. Please check the console and try again.')
       }
     } catch (error) {
       console.error('Error creating room:', error)
-      alert('Error creating room. Please try again.')
+      alert(`Error creating room: ${error.message || error}. Please check the console for details.`)
     }
   }
 
@@ -227,7 +231,7 @@ const Lobby: React.FC = () => {
                         <button 
                           onClick={() => {
                             console.log('Force resetting loading state')
-                            // We'll need to access the context's setLoading somehow
+                            window.location.reload()
                           }}
                           className="bg-red-500 text-white px-2 py-1 rounded text-xs"
                         >
@@ -272,7 +276,7 @@ const Lobby: React.FC = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={handleCreateRoom}
-                        disabled={!roomName.trim() || loading}
+                        disabled={!roomName.trim()}
                         className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
                       >
                         {loading ? '⏳ Creating...' : '✅ Create'}
