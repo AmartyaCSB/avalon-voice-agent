@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLobby } from '../contexts/LobbyContext'
+import LoadingSpinner from './LoadingSpinner'
 
 interface CircularGameRoomProps {
   roomCode: string
@@ -10,9 +11,11 @@ interface CircularGameRoomProps {
 
 const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, isHost }) => {
   const { user } = useAuth()
-  const { currentRoom, sendMessage, chatMessages, startGame } = useLobby()
+  const { currentRoom, sendMessage, chatMessages, startGame, loading } = useLobby()
   const [chatInput, setChatInput] = useState('')
   const [showChat, setShowChat] = useState(false)
+  const [isStartingGame, setIsStartingGame] = useState(false)
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
 
   // Calculate player positions around the circle
   const getPlayerPosition = (index: number, total: number) => {
@@ -29,8 +32,9 @@ const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, 
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!chatInput.trim()) return
+    if (!chatInput.trim() || isSendingMessage) return
     
+    setIsSendingMessage(true)
     try {
       console.log('Sending message:', chatInput.trim())
       await sendMessage(chatInput.trim(), 'general')
@@ -39,10 +43,15 @@ const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, 
     } catch (error) {
       console.error('Failed to send message:', error)
       alert('Failed to send message. Please try again.')
+    } finally {
+      setIsSendingMessage(false)
     }
   }
 
   const handleStartGame = async () => {
+    if (isStartingGame) return
+    
+    setIsStartingGame(true)
     try {
       console.log('Starting game for room:', roomCode)
       const success = await startGame()
@@ -57,6 +66,8 @@ const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, 
     } catch (error) {
       console.error('Error starting game:', error)
       alert('Failed to start game. Please try again.')
+    } finally {
+      setIsStartingGame(false)
     }
   }
 
@@ -121,9 +132,17 @@ const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, 
                 {isHost && players.length >= 5 && (
                   <button
                     onClick={handleStartGame}
-                    className="mt-4 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold transition-colors"
+                    disabled={isStartingGame}
+                    className="mt-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 justify-center min-w-[140px]"
                   >
-                    🎮 Begin Quest
+                    {isStartingGame ? (
+                      <>
+                        <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                        Starting...
+                      </>
+                    ) : (
+                      <>🎮 Begin Quest</>
+                    )}
                   </button>
                 )}
                 {players.length < 5 && (
@@ -258,10 +277,14 @@ const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, 
               />
               <button
                 type="submit"
-                disabled={!chatInput.trim()}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                disabled={!chatInput.trim() || isSendingMessage}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 min-w-[70px] justify-center"
               >
-                Send
+                {isSendingMessage ? (
+                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                ) : (
+                  'Send'
+                )}
               </button>
             </div>
           </form>
