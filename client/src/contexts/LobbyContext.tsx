@@ -338,7 +338,12 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .order('created_at', { ascending: false })
         .limit(20)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error loading rooms:', error)
+        throw error
+      }
+      
+      console.log('Loaded rooms:', rooms)
       setRooms(rooms || [])
     } catch (error) {
       console.error('Error loading rooms:', error)
