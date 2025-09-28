@@ -2,11 +2,27 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, GameRoom, RoomPlayer, PlayerProfile, User } from '../lib/supabase'
 import { useAuth } from './AuthContext'
 
+interface ChatMessage {
+  id: string
+  room_id: string
+  user_id: string
+  message: string
+  message_type: 'general' | 'team' | 'system' | 'whisper'
+  target_user_id?: string
+  is_deleted: boolean
+  created_at: string
+  users?: {
+    display_name: string
+    avatar_url?: string
+  }
+}
+
 interface LobbyContextType {
   rooms: GameRoom[]
   currentRoom: GameRoom | null
   roomPlayers: RoomPlayer[]
   playerProfiles: PlayerProfile[]
+  chatMessages: ChatMessage[]
   loading: boolean
   createRoom: (roomName: string, maxPlayers: number) => Promise<GameRoom | null>
   joinRoom: (roomCode: string) => Promise<boolean>
@@ -14,6 +30,8 @@ interface LobbyContextType {
   createPlayerProfile: (personaName: string, personaDescription: string, preferredRole?: 'good' | 'evil') => Promise<PlayerProfile | null>
   updatePlayerProfile: (profileId: string, updates: Partial<PlayerProfile>) => Promise<void>
   refreshRooms: () => Promise<void>
+  sendMessage: (message: string, messageType?: 'general' | 'team' | 'system' | 'whisper', targetUserId?: string) => Promise<void>
+  loadChatMessages: (roomId: string) => Promise<void>
 }
 
 const LobbyContext = createContext<LobbyContextType | undefined>(undefined)
@@ -32,6 +50,7 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentRoom, setCurrentRoom] = useState<GameRoom | null>(null)
   const [roomPlayers, setRoomPlayers] = useState<RoomPlayer[]>([])
   const [playerProfiles, setPlayerProfiles] = useState<PlayerProfile[]>([])
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
 
   // Generate room code
@@ -323,18 +342,163 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [currentRoom])
 
+  // Send a chat message
+  const sendMessage = async (
+    message: string, 
+    messageType: 'general' | 'team' | 'system' | 'whisper' = 'general',
+    targetUserId?: string
+  ) => {
+    if (!user || !currentRoom || !message.trim()) return
+
+    try {
+      const { data: newMessage, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          room_id: currentRoom.id,
+          user_id: user.id,
+          message: message.trim(),
+          message_type: messageType,
+          target_user_id: targetUserId
+        })
+        .select(`
+          *,
+          users (
+            display_name,
+            avatar_url
+          )
+        `)
+        .single()
+
+      if (error) throw error
+
+      setChatMessages(prev => [...prev, newMessage])
+    } catch (error) {
+      console.error('Error sending message:', error)
+    }
+  }
+
+  // Load chat messages for a room
+  const loadChatMessages = async (roomId: string) => {
+    try {
+      const { data: messages, error } = await supabase
+        .from('chat_messages')
+        .select(`
+          *,
+          users (
+            display_name,
+            avatar_url
+          )
+        `)
+        .eq('room_id', roomId)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: true })
+        .limit(100)
+
+      if (error) throw error
+      setChatMessages(messages || [])
+    } catch (error) {
+      console.error('Error loading chat messages:', error)
+    }
+  }
+
+  // Set up real-time subscriptions for current room
+  useEffect(() => {
+    if (!currentRoom) return
+
+    // Subscribe to chat messages
+    const chatSubscription = supabase
+      .channel(`room-${currentRoom.id}-chat`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `room_id=eq.${currentRoom.id}`
+        },
+        async (payload) => {
+          // Fetch the complete message with user data
+          const { data: messageWithUser } = await supabase
+            .from('chat_messages')
+            .select(`
+              *,
+              users (
+                display_name,
+                avatar_url
+              )
+            `)
+            .eq('id', payload.new.id)
+            .single()
+
+          if (messageWithUser) {
+            setChatMessages(prev => [...prev, messageWithUser])
+          }
+        }
+      )
+      .subscribe()
+
+    // Subscribe to room players changes
+    const playersSubscription = supabase
+      .channel(`room-${currentRoom.id}-players`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_players',
+          filter: `room_id=eq.${currentRoom.id}`
+        },
+        () => {
+          loadRoomPlayers(currentRoom.id)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      chatSubscription.unsubscribe()
+      playersSubscription.unsubscribe()
+    }
+  }, [currentRoom])
+
+  // Load user's player profiles on mount
+  useEffect(() => {
+    if (user) {
+      loadPlayerProfiles()
+    }
+  }, [user])
+
+  const loadPlayerProfiles = async () => {
+    if (!user) return
+
+    try {
+      const { data: profiles, error } = await supabase
+        .from('player_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setPlayerProfiles(profiles || [])
+    } catch (error) {
+      console.error('Error loading player profiles:', error)
+    }
+  }
+
   const value = {
     rooms,
     currentRoom,
     roomPlayers,
     playerProfiles,
+    chatMessages,
     loading,
     createRoom,
     joinRoom,
     leaveRoom,
     createPlayerProfile,
     updatePlayerProfile,
-    refreshRooms
+    refreshRooms,
+    sendMessage,
+    loadChatMessages
   }
 
   return (
