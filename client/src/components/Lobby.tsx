@@ -155,6 +155,9 @@ const Lobby: React.FC = () => {
 
   // Show circular room layout when in a room
   if (currentRoom) {
+    console.log('Current room detected:', currentRoom.room_code, 'Status:', currentRoom.status)
+    console.log('Players:', roomPlayers.length)
+    
     if (currentRoom.status === 'playing') {
       return (
         <QuestSystem 
@@ -166,6 +169,7 @@ const Lobby: React.FC = () => {
       )
     }
     
+    console.log('Rendering CircularGameRoom for room:', currentRoom.room_code)
     return (
       <CircularGameRoom
         roomCode={currentRoom.room_code}
@@ -176,25 +180,40 @@ const Lobby: React.FC = () => {
   }
 
   // Show main lobby if not in a room
+  console.log('No current room, showing main lobby')
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
       <div className="max-w-6xl mx-auto">
-        {false && (
-            /* Enhanced Lobby Layout */
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-            {/* Players List - Enhanced */}
-            <div className="lg:col-span-1">
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 h-fit">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-white">
-                    Players
-                  </h2>
-                  <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    {roomPlayers.length}/{currentRoom.max_players}
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {roomPlayers.map((player) => (
+        {/* Enhanced Header */}
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-8 border border-white/20">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-3xl">
+                ⚔️
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold text-white mb-1">Avalon Lobby</h1>
+                <p className="text-blue-200 flex items-center gap-2">
+                  <span>🛡️ Welcome back, <span className="text-yellow-300 font-semibold">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span></span>
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Link
+                to="/profiles"
+                className="bg-purple-600 text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition-all duration-200 flex items-center gap-2 font-semibold hover:scale-105"
+              >
+                👤 Manage Profiles
+              </Link>
+              <button
+                onClick={signOut}
+                className="bg-gray-600 text-white px-6 py-3 rounded-xl hover:bg-gray-700 transition-all duration-200 flex items-center gap-2 font-semibold hover:scale-105"
+              >
+                🚪 Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
                     <div key={player.id} className="bg-white/5 rounded-lg p-3 flex items-center gap-3">
                       <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                         {player.player_profiles?.persona_name?.charAt(0) || '?'}
