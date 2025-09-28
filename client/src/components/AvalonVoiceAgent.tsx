@@ -63,8 +63,8 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
       // Generate roles locally without server
       generateLocalAssignment();
       
-      // Show helpful message instead of error
-      alert('🎲 Roles generated locally! For voice narration, set up the backend server. See Voice Agent Setup Guide for details.');
+      // Show simple message
+      console.log('🎲 Roles generated successfully!');
     }
   }
 
@@ -74,15 +74,15 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
     setAssignments(assignments);
     setSummary(buildSummary(players, roles));
     
-    // Set simple narration without TTS
+    // Set simple narration
     setNarration({
       steps: [
         "Welcome to Avalon!",
-        "Roles have been assigned locally.",
-        "Set up the backend server for voice narration.",
-        "Check the Voice Agent Setup Guide for instructions."
+        "Roles have been assigned.",
+        "Each player should click to see their role.",
+        "Good luck saving Camelot!"
       ],
-      notes: ["Voice narration requires ElevenLabs API setup"]
+      notes: ["Click 'Narrate Setup' to hear the role reveals"]
     });
   }
 
@@ -256,29 +256,6 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
       fontFamily: 'Arial, sans-serif'
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        {/* Voice Setup Notice */}
-        {!ttsEnabledServerSide() && (
-          <div style={{
-            background: 'rgba(255, 193, 7, 0.2)',
-            border: '1px solid #ffc107',
-            borderRadius: '8px',
-            padding: '1rem',
-            marginBottom: '2rem',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🎤</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-              Voice Narration Available!
-            </div>
-            <div style={{ opacity: 0.9 }}>
-              Set up ElevenLabs API for AI voice narration. Check the Voice Agent Setup Guide for instructions.
-              <br />
-              <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>
-                (Currently using local role generation with browser text-to-speech)
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
