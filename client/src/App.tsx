@@ -358,6 +358,11 @@ function AppContent() {
           <Lobby onBack={() => window.history.back()} />
         </ProtectedRoute>
       } />
+      <Route path="/room/:roomCode" element={
+        <ProtectedRoute>
+          <Lobby onBack={() => window.history.back()} />
+        </ProtectedRoute>
+      } />
       <Route path="/profiles" element={
         <ProtectedRoute>
           <PlayerProfile onBack={() => window.history.back()} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useLobby } from '../contexts/LobbyContext'
 import { GameRoom } from '../lib/supabase'
@@ -7,6 +7,8 @@ import QuestSystem from './QuestSystem'
 
 const Lobby: React.FC = () => {
   const { user, signInWithGoogle, signOut } = useAuth()
+  const { roomCode } = useParams()
+  const navigate = useNavigate()
   const { 
     rooms, 
     currentRoom, 
@@ -99,10 +101,21 @@ const Lobby: React.FC = () => {
     }
   }
 
+  // Handle room URL parameter
+  useEffect(() => {
+    if (roomCode && !currentRoom) {
+      joinRoom(roomCode)
+    }
+  }, [roomCode])
+
   // Load chat messages when entering a room
   useEffect(() => {
     if (currentRoom) {
       loadChatMessages(currentRoom.id)
+      // Update URL to reflect current room
+      if (currentRoom.room_code !== roomCode) {
+        navigate(`/room/${currentRoom.room_code}`, { replace: true })
+      }
     }
   }, [currentRoom, loadChatMessages])
 
@@ -301,16 +314,32 @@ const Lobby: React.FC = () => {
               <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6">
                 <h2 className="text-xl font-semibold text-white mb-4">Room Info</h2>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-blue-200">Code:</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-white font-mono bg-white/10 px-2 py-1 rounded">{currentRoom.room_code}</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-200">Code:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-mono bg-white/10 px-2 py-1 rounded">{currentRoom.room_code}</span>
+                        <button
+                          onClick={() => navigator.clipboard?.writeText(currentRoom.room_code)}
+                          className="text-blue-400 hover:text-blue-300 text-sm"
+                          title="Copy room code"
+                        >
+                          📋
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-200">Share URL:</span>
                       <button
-                        onClick={() => navigator.clipboard?.writeText(currentRoom.room_code)}
-                        className="text-blue-400 hover:text-blue-300 text-sm"
-                        title="Copy to clipboard"
+                        onClick={() => {
+                          const roomUrl = `${window.location.origin}/room/${currentRoom.room_code}`
+                          navigator.clipboard?.writeText(roomUrl)
+                          alert('Room URL copied to clipboard!')
+                        }}
+                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition-colors flex items-center gap-1"
+                        title="Copy shareable room URL"
                       >
-                        📋
+                        🔗 Copy Link
                       </button>
                     </div>
                   </div>
@@ -390,47 +419,59 @@ const Lobby: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-white">Avalon Lobby</h1>
-            <p className="text-blue-200">Welcome back, {user.user_metadata?.full_name || user.email}</p>
-          </div>
-          <div className="flex gap-3">
-            <Link
-              to="/profiles"
-              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              Manage Profiles
-            </Link>
-            <button
-              onClick={signOut}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              Sign Out
-            </button>
+        {/* Enhanced Header */}
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-8 border border-white/20">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-3xl">
+                ⚔️
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold text-white mb-1">Avalon Lobby</h1>
+                <p className="text-blue-200 flex items-center gap-2">
+                  <span>🛡️ Welcome back, <span className="text-yellow-300 font-semibold">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span></span>
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Link
+                to="/profiles"
+                className="bg-purple-600 text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition-all duration-200 flex items-center gap-2 font-semibold hover:scale-105"
+              >
+                👤 Manage Profiles
+              </Link>
+              <button
+                onClick={signOut}
+                className="bg-gray-600 text-white px-6 py-3 rounded-xl hover:bg-gray-700 transition-all duration-200 flex items-center gap-2 font-semibold hover:scale-105"
+              >
+                🚪 Sign Out
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-4 mb-8">
+        {/* Enhanced Action Buttons */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <button
             onClick={() => setShowCreateRoom(true)}
-            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold"
+            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-bold text-lg flex items-center justify-center gap-3 hover:scale-105 shadow-lg"
           >
-            🏠 Create Room
+            <span className="text-2xl">🏠</span>
+            <span>Create Room</span>
           </button>
           <button
             onClick={() => setShowJoinRoom(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 font-bold text-lg flex items-center justify-center gap-3 hover:scale-105 shadow-lg"
           >
-            🚪 Join Room
+            <span className="text-2xl">🚪</span>
+            <span>Join Room</span>
           </button>
           <button
             onClick={refreshRooms}
-            className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 font-bold text-lg flex items-center justify-center gap-3 hover:scale-105 shadow-lg"
           >
-            🔄 Refresh
+            <span className="text-2xl">🔄</span>
+            <span>Refresh</span>
           </button>
         </div>
 
@@ -471,14 +512,30 @@ const Lobby: React.FC = () => {
                     </p>
                   </div>
 
-                  <button
-                    onClick={() => joinRoom(room.room_code)}
-                    disabled={room.current_players >= room.max_players || room.status !== 'waiting'}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {room.current_players >= room.max_players ? 'Room Full' : 
-                     room.status !== 'waiting' ? 'Game In Progress' : 'Join Room'}
-                  </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          joinRoom(room.room_code)
+                          navigate(`/room/${room.room_code}`)
+                        }}
+                        disabled={room.current_players >= room.max_players || room.status !== 'waiting'}
+                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {room.current_players >= room.max_players ? 'Room Full' : 
+                         room.status !== 'waiting' ? 'Game In Progress' : 'Join Room'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const roomUrl = `${window.location.origin}/room/${room.room_code}`
+                          navigator.clipboard?.writeText(roomUrl)
+                          alert('Room URL copied to clipboard!')
+                        }}
+                        className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                        title="Copy room URL"
+                      >
+                        🔗
+                      </button>
+                    </div>
                 </div>
               ))}
             </div>
