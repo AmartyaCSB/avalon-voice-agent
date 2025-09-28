@@ -213,9 +213,12 @@ function App() {
     }}>
       {/* Hero Section */}
       <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '4rem', marginBottom: '1rem', background: 'linear-gradient(45deg, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          ⚔️ Avalon - The Resistance
-        </h1>
+            <h1 style={{ fontSize: '4rem', marginBottom: '1rem', background: 'linear-gradient(45deg, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              ⚔️ Avalon - The Resistance
+            </h1>
+            <p style={{ fontSize: '1rem', marginBottom: '1rem', opacity: 0.7, fontStyle: 'italic' }}>
+              🚀 Live on aeonic.earth - Auto-deployed from GitHub!
+            </p>
         <p style={{ fontSize: '1.3rem', marginBottom: '2rem', opacity: 0.9, maxWidth: '700px', margin: '0 auto 2rem' }}>
           Join the loyal servants of Arthur or embrace the darkness as a minion of Mordred. The ultimate social deduction game of trust, betrayal, and hidden identities.
         </p>
