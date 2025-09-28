@@ -58,9 +58,73 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
 
       setSummary(buildSummary(players, roles));
     } catch (error) {
-      console.error('Error assigning roles:', error);
-      alert('Error connecting to server. Make sure the server is running.');
+      console.error('Server not available, using local assignment:', error);
+      
+      // Generate roles locally without server
+      generateLocalAssignment();
+      
+      // Show helpful message instead of error
+      alert('🎲 Roles generated locally! For voice narration, set up the backend server. See Voice Agent Setup Guide for details.');
     }
+  }
+
+  function generateLocalAssignment() {
+    // Import logic for local role generation
+    const assignments = getLocalAssignments(players, roles);
+    setAssignments(assignments);
+    setSummary(buildSummary(players, roles));
+    
+    // Set simple narration without TTS
+    setNarration({
+      steps: [
+        "Welcome to Avalon!",
+        "Roles have been assigned locally.",
+        "Set up the backend server for voice narration.",
+        "Check the Voice Agent Setup Guide for instructions."
+      ],
+      notes: ["Voice narration requires ElevenLabs API setup"]
+    });
+  }
+
+  function getLocalAssignments(playerCount: number, roleConfig: any) {
+    // Simple local role assignment logic
+    const { good: goodCount, evil: evilCount } = teamCountsSafe(playerCount);
+    const assignments = [];
+    
+    // Available roles based on configuration
+    const goodRoles = [];
+    const evilRoles = [];
+    
+    if (roleConfig.Merlin) goodRoles.push('Merlin');
+    if (roleConfig.Percival) goodRoles.push('Percival');
+    if (roleConfig.Morgana) evilRoles.push('Morgana');
+    if (roleConfig.Mordred) evilRoles.push('Mordred');
+    if (roleConfig.Oberon) evilRoles.push('Oberon');
+    
+    // Fill with generic roles
+    while (goodRoles.length < goodCount) {
+      goodRoles.push('Loyal Servant of Arthur');
+    }
+    while (evilRoles.length < evilCount) {
+      evilRoles.push('Minion of Mordred');
+    }
+    
+    // Combine and shuffle
+    const allRoles = [
+      ...goodRoles.map(role => ({ role, team: 'Good' })),
+      ...evilRoles.map(role => ({ role, team: 'Evil' }))
+    ].sort(() => Math.random() - 0.5);
+    
+    // Create assignments
+    for (let i = 0; i < playerCount; i++) {
+      assignments.push({
+        player: i + 1,
+        role: allRoles[i].role,
+        team: allRoles[i].team
+      });
+    }
+    
+    return assignments;
   }
 
   async function onNarrate() {
@@ -192,6 +256,30 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
       fontFamily: 'Arial, sans-serif'
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        {/* Voice Setup Notice */}
+        {!ttsEnabledServerSide() && (
+          <div style={{
+            background: 'rgba(255, 193, 7, 0.2)',
+            border: '1px solid #ffc107',
+            borderRadius: '8px',
+            padding: '1rem',
+            marginBottom: '2rem',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🎤</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+              Voice Narration Available!
+            </div>
+            <div style={{ opacity: 0.9 }}>
+              Set up ElevenLabs API for AI voice narration. Check the Voice Agent Setup Guide for instructions.
+              <br />
+              <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>
+                (Currently using local role generation with browser text-to-speech)
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>
