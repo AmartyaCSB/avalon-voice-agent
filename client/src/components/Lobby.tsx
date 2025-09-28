@@ -104,7 +104,11 @@ const Lobby: React.FC = () => {
 
   // Handle room URL parameter
   useEffect(() => {
+    console.log('URL roomCode param:', roomCode)
+    console.log('Current room:', currentRoom?.room_code)
+    
     if (roomCode && !currentRoom) {
+      console.log('Joining room from URL:', roomCode)
       joinRoom(roomCode)
     }
   }, [roomCode])
@@ -170,12 +174,17 @@ const Lobby: React.FC = () => {
     }
     
     console.log('Rendering CircularGameRoom for room:', currentRoom.room_code)
+    
+    // Temporary: Force render a simple test instead of CircularGameRoom
     return (
-      <CircularGameRoom
-        roomCode={currentRoom.room_code}
-        players={roomPlayers}
-        isHost={currentRoom.host_id === user.id}
-      />
+      <div className="min-h-screen bg-gradient-to-br from-amber-900 via-amber-800 to-amber-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h1 className="text-4xl font-bold mb-4">🏰 Round Table</h1>
+          <p className="text-xl mb-2">Room: {currentRoom.room_code}</p>
+          <p className="text-lg">Players: {roomPlayers.length}</p>
+          <p className="text-amber-200 mt-4">Circular layout coming soon!</p>
+        </div>
+      </div>
     )
   }
 
@@ -527,6 +536,7 @@ const Lobby: React.FC = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
+                          console.log('Joining room and navigating:', room.room_code)
                           joinRoom(room.room_code)
                           navigate(`/room/${room.room_code}`)
                         }}
