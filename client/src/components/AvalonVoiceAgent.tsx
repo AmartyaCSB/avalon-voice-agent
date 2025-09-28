@@ -149,18 +149,27 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
     if (validation.errors.length) return;
 
     const myRun = ++runRef.current;    
-    setLoadingNarration(true);
-    try {
-      const res = await getNarration(players, roles);
-      if (runRef.current !== myRun) return;
-      setNarration(res);
-      await speakNarration(res, myRun);
-    } catch (error) {
-      console.error('Error getting narration:', error);
-      alert('Error connecting to server. Make sure the server is running.');
-    } finally {
-      if (runRef.current === myRun) setLoadingNarration(false);
+    
+    // If no narration exists, generate it first
+    if (!narration) {
+      if (!assignments) {
+        alert('Please assign roles first before narrating!');
+        return;
+      }
+      const localNarration = generateNarrationSteps(assignments, roles);
+      setNarration({
+        steps: localNarration,
+        notes: ["Voice narration using browser text-to-speech"]
+      });
     }
+
+    // Use existing or newly generated narration
+    const currentNarration = narration || {
+      steps: generateNarrationSteps(assignments || [], roles),
+      notes: ["Voice narration using browser text-to-speech"]
+    };
+
+    await speakNarration(currentNarration, myRun);
   }
 
   async function speakNarration(

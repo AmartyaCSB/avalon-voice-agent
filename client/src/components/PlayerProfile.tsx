@@ -51,17 +51,34 @@ const PlayerProfileComponent: React.FC = () => {
 
   const handleEditProfile = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editingProfile) return
+    console.log('Updating profile with data:', formData)
+    
+    if (!editingProfile) {
+      alert('No profile selected for editing')
+      return
+    }
 
-    await updatePlayerProfile(editingProfile.id, {
-      persona_name: formData.personaName,
-      persona_description: formData.personaDescription,
-      preferred_role: formData.preferredRole
-    })
+    if (!formData.personaName.trim()) {
+      alert('Please enter a persona name')
+      return
+    }
 
-    setFormData({ personaName: '', personaDescription: '', preferredRole: 'good' })
-    setEditingProfile(null)
-    setShowEditForm(false)
+    try {
+      await updatePlayerProfile(editingProfile.id, {
+        persona_name: formData.personaName,
+        persona_description: formData.personaDescription,
+        preferred_role: formData.preferredRole
+      })
+
+      console.log('Profile updated successfully')
+      setFormData({ personaName: '', personaDescription: '', preferredRole: 'good' })
+      setEditingProfile(null)
+      setShowEditForm(false)
+      alert('Profile updated successfully!')
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      alert('Failed to update profile. Please try again.')
+    }
   }
 
   const startEdit = (profile: PlayerProfile) => {

@@ -236,13 +236,22 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Update player profile
   const updatePlayerProfile = async (profileId: string, updates: Partial<PlayerProfile>) => {
+    console.log('Updating profile:', profileId, 'with updates:', updates)
+    
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('player_profiles')
         .update(updates)
         .eq('id', profileId)
+        .select()
+        .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error updating profile:', error)
+        throw error
+      }
+
+      console.log('Profile updated in database:', data)
 
       // Update local state
       setPlayerProfiles(prev => 
@@ -250,8 +259,11 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           profile.id === profileId ? { ...profile, ...updates } : profile
         )
       )
+      
+      console.log('Local state updated successfully')
     } catch (error) {
       console.error('Error updating player profile:', error)
+      throw error
     }
   }
 

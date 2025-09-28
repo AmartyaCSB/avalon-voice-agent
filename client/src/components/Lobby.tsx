@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useLobby } from '../contexts/LobbyContext'
 import { GameRoom } from '../lib/supabase'
+import QuestSystem from './QuestSystem'
 
 const Lobby: React.FC = () => {
   const { user, signInWithGoogle, signOut } = useAuth()
@@ -136,8 +137,16 @@ const Lobby: React.FC = () => {
             </div>
           </div>
 
-          {/* Room Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Game Content */}
+          {currentRoom.status === 'playing' ? (
+            <QuestSystem 
+              roomCode={currentRoom.room_code}
+              players={roomPlayers}
+              currentLeader={roomPlayers[0]?.user_id || ''}
+            />
+          ) : (
+            /* Lobby Layout */
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Players List */}
             <div className="lg:col-span-1">
               <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6">
@@ -274,6 +283,7 @@ const Lobby: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
         </div>
       </div>
     )
