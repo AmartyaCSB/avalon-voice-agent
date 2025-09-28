@@ -220,6 +220,21 @@ const Lobby: React.FC = () => {
                   </button>
                 ) : (
                   <div className="space-y-4">
+                    {/* Debug info */}
+                    <div className="text-xs text-blue-300 bg-black/20 p-2 rounded flex justify-between items-center">
+                      <span>Debug: loading={loading.toString()}, roomName="{roomName}"</span>
+                      {loading && (
+                        <button 
+                          onClick={() => {
+                            console.log('Force resetting loading state')
+                            // We'll need to access the context's setLoading somehow
+                          }}
+                          className="bg-red-500 text-white px-2 py-1 rounded text-xs"
+                        >
+                          Reset Loading
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="text"
                       placeholder="Room Name"
@@ -228,8 +243,22 @@ const Lobby: React.FC = () => {
                         console.log('Room name changed:', e.target.value)
                         setRoomName(e.target.value)
                       }}
-                      disabled={loading}
-                      className="w-full bg-white/10 text-white placeholder-blue-200 border border-white/20 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                      onInput={(e) => {
+                        console.log('Input event:', e.currentTarget.value)
+                      }}
+                      onKeyDown={(e) => {
+                        console.log('Key pressed:', e.key)
+                      }}
+                      onFocus={() => console.log('Input focused')}
+                      onBlur={() => console.log('Input blurred')}
+                      disabled={false}
+                      autoComplete="off"
+                      style={{ 
+                        pointerEvents: 'auto',
+                        userSelect: 'text',
+                        WebkitUserSelect: 'text'
+                      }}
+                      className="w-full bg-white/10 text-white placeholder-blue-200 border border-white/20 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <input
                       type="number"
