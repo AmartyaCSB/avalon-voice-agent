@@ -30,6 +30,21 @@ const Lobby: React.FC = () => {
   const [showJoinRoom, setShowJoinRoom] = useState(false)
   const [chatMessage, setChatMessage] = useState('')
   const chatMessagesRef = useRef<HTMLDivElement>(null)
+  const [gameAssignments, setGameAssignments] = useState<any[]>([])
+
+  // Extract assignments from URL when coming from voice agent
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const assignmentsParam = urlParams.get('assignments')
+    if (assignmentsParam) {
+      try {
+        const assignments = JSON.parse(decodeURIComponent(assignmentsParam))
+        setGameAssignments(assignments)
+      } catch (error) {
+        console.error('Error parsing assignments:', error)
+      }
+    }
+  }, [])
 
   // Refresh rooms periodically
   useEffect(() => {
@@ -143,6 +158,7 @@ const Lobby: React.FC = () => {
               roomCode={currentRoom.room_code}
               players={roomPlayers}
               currentLeader={roomPlayers[0]?.user_id || ''}
+              assignments={gameAssignments}
             />
           ) : (
             /* Lobby Layout */

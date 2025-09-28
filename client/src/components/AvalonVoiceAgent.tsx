@@ -326,7 +326,15 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
               FAQ & Rules
             </button>
             <button 
-              onClick={onBack}
+              onClick={() => {
+                if (roomCode && assignments) {
+                  // Pass assignments back to lobby
+                  const assignmentsParam = encodeURIComponent(JSON.stringify(assignments))
+                  window.location.href = `/lobby?assignments=${assignmentsParam}`
+                } else {
+                  onBack()
+                }
+              }}
               style={{
                 background: '#6b7280',
                 color: 'white',
@@ -337,7 +345,7 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
                 fontSize: '1rem'
               }}
             >
-              Back to Home
+              {roomCode ? 'Return to Game' : 'Back to Home'}
             </button>
           </div>
         </div>
