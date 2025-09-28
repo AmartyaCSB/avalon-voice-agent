@@ -34,6 +34,10 @@ interface LobbyContextType {
   loadChatMessages: (roomId: string) => Promise<void>
   startGame: () => Promise<boolean>
   kickPlayer: (playerId: string) => Promise<boolean>
+  saveGameState: (gameState: any) => Promise<void>
+  loadGameState: (roomId: string) => Promise<any>
+  saveRoleAssignments: (roomId: string, assignments: any[]) => Promise<void>
+  loadRoleAssignments: (roomId: string) => Promise<any[]>
 }
 
 const LobbyContext = createContext<LobbyContextType | undefined>(undefined)
@@ -540,6 +544,12 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Send system message
       await sendMessage(`🎮 Game started! ${roomPlayers.length} players ready.`, 'system')
 
+      // Initialize game state in database
+      await supabase.rpc('initialize_game_state', {
+        room_id_param: currentRoom.id,
+        player_count: roomPlayers.length
+      })
+
       // Navigate to voice agent for role assignment
       window.location.href = `/voice-agent?room=${currentRoom.room_code}&players=${roomPlayers.length}`
 
@@ -579,6 +589,88 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }
 
+  // Save game state to database
+  const saveGameState = async (gameState: any) => {
+    if (!currentRoom) return
+
+    try {
+      const { error } = await supabase
+        .from('game_state')
+        .upsert({
+          room_id: currentRoom.id,
+          ...gameState,
+          updated_at: new Date().toISOString()
+        })
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error saving game state:', error)
+    }
+  }
+
+  // Load game state from database
+  const loadGameState = async (roomId: string): Promise<any> => {
+    try {
+      const { data, error } = await supabase
+        .from('game_state')
+        .select('*')
+        .eq('room_id', roomId)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+      return data || null
+    } catch (error) {
+      console.error('Error loading game state:', error)
+      return null
+    }
+  }
+
+  // Save role assignments to database
+  const saveRoleAssignments = async (roomId: string, assignments: any[]) => {
+    try {
+      // First clear existing assignments
+      await supabase
+        .from('role_assignments')
+        .delete()
+        .eq('room_id', roomId)
+
+      // Insert new assignments
+      const assignmentData = assignments.map((assignment, index) => ({
+        room_id: roomId,
+        user_id: roomPlayers[index]?.user_id,
+        role_name: assignment.role,
+        team: assignment.team
+      })).filter(a => a.user_id) // Filter out invalid entries
+
+      if (assignmentData.length > 0) {
+        const { error } = await supabase
+          .from('role_assignments')
+          .insert(assignmentData)
+
+        if (error) throw error
+      }
+    } catch (error) {
+      console.error('Error saving role assignments:', error)
+    }
+  }
+
+  // Load role assignments from database
+  const loadRoleAssignments = async (roomId: string): Promise<any[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('role_assignments')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at')
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error loading role assignments:', error)
+      return []
+    }
+  }
+
   // Load user's player profiles on mount
   useEffect(() => {
     if (user) {
@@ -602,7 +694,11 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     sendMessage,
     loadChatMessages,
     startGame,
-    kickPlayer
+    kickPlayer,
+    saveGameState,
+    loadGameState,
+    saveRoleAssignments,
+    loadRoleAssignments
   }
 
   return (

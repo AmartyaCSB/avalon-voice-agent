@@ -82,8 +82,21 @@ const Lobby: React.FC = () => {
     e.preventDefault()
     if (!chatMessage.trim()) return
 
-    await sendMessage(chatMessage)
-    setChatMessage('')
+    try {
+      console.log('Sending message:', chatMessage)
+      await sendMessage(chatMessage.trim(), 'general')
+      setChatMessage('')
+      
+      // Auto-scroll to bottom after sending
+      setTimeout(() => {
+        if (chatMessagesRef.current) {
+          chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight
+        }
+      }, 100)
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      alert('Failed to send message. Please try again.')
+    }
   }
 
   // Load chat messages when entering a room
@@ -161,14 +174,19 @@ const Lobby: React.FC = () => {
               assignments={gameAssignments}
             />
           ) : (
-            /* Lobby Layout */
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Players List */}
+            /* Enhanced Lobby Layout */
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            {/* Players List - Enhanced */}
             <div className="lg:col-span-1">
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6">
-                <h2 className="text-xl font-semibold text-white mb-4">
-                  Players ({roomPlayers.length}/{currentRoom.max_players})
-                </h2>
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 h-fit">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-white">
+                    Players
+                  </h2>
+                  <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                    {roomPlayers.length}/{currentRoom.max_players}
+                  </span>
+                </div>
                 <div className="space-y-3">
                   {roomPlayers.map((player) => (
                     <div key={player.id} className="bg-white/5 rounded-lg p-3 flex items-center gap-3">
@@ -206,78 +224,142 @@ const Lobby: React.FC = () => {
               </div>
             </div>
 
-            {/* Chat Area */}
-            <div className="lg:col-span-2">
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 h-96">
-                <h2 className="text-xl font-semibold text-white mb-4">Room Chat</h2>
+            {/* Enhanced Chat Area */}
+            <div className="lg:col-span-1">
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 h-fit">
+                <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                  💬 Room Chat
+                  {chatMessages.length > 0 && (
+                    <span className="bg-green-600 text-white text-xs px-2 py-1 rounded-full">
+                      {chatMessages.length}
+                    </span>
+                  )}
+                </h2>
                 
-                {/* Chat Messages */}
+                {/* Enhanced Chat Messages */}
                 <div 
                   ref={chatMessagesRef}
-                  className="bg-white/5 rounded-lg p-4 h-64 overflow-y-auto mb-4 space-y-2"
+                  className="bg-white/5 rounded-lg p-4 h-80 overflow-y-auto mb-4 space-y-3"
                 >
                   {chatMessages.length === 0 ? (
-                    <p className="text-blue-200 text-center py-8">No messages yet. Start the conversation!</p>
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-2">💬</div>
+                      <p className="text-blue-200 text-sm">No messages yet. Start the conversation!</p>
+                    </div>
                   ) : (
                     chatMessages.map((message) => (
-                      <div key={message.id} className="bg-white/5 rounded p-2">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-purple-300 font-medium text-sm">
-                            {message.users?.display_name || 'Unknown'}
-                          </span>
-                          <span className="text-blue-300 text-xs">
-                            {new Date(message.created_at).toLocaleTimeString()}
-                          </span>
+                      <div key={message.id} className="group">
+                        <div className={`p-3 rounded-lg ${
+                          message.user_id === user.id 
+                            ? 'bg-blue-600/30 ml-4' 
+                            : 'bg-white/10 mr-4'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                              {(message.users?.display_name || 'U')?.charAt(0)}
+                            </div>
+                            <span className="text-blue-300 font-medium text-sm">
+                              {message.user_id === user.id ? 'You' : message.users?.display_name || 'Unknown'}
+                            </span>
+                            <span className="text-blue-200 text-xs opacity-70">
+                              {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-white text-sm leading-relaxed">{message.message}</p>
                         </div>
-                        <p className="text-white text-sm">{message.message}</p>
                       </div>
                     ))
                   )}
                 </div>
 
-                {/* Chat Input */}
-                <form onSubmit={handleSendMessage} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={chatMessage}
-                    onChange={(e) => setChatMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    type="submit"
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Send
-                  </button>
-                </form>
+                {/* Enhanced Chat Input */}
+                <div className="space-y-2">
+                  <form onSubmit={handleSendMessage} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={chatMessage}
+                      onChange={(e) => setChatMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-blue-200 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!chatMessage.trim()}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      Send
+                    </button>
+                  </form>
+                  <p className="text-blue-200 text-xs">Press Enter to send</p>
+                </div>
               </div>
             </div>
 
-            {/* Room Settings & Controls */}
+            {/* Room Info & Controls */}
             <div className="lg:col-span-1 space-y-6">
+              {/* Room Info Panel */}
               <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Room Info</h3>
-                <div className="space-y-3 text-blue-200 text-sm">
-                  <p><span className="font-medium">Code:</span> <span className="font-mono text-yellow-300">{currentRoom.room_code}</span></p>
-                  <p><span className="font-medium">Max:</span> {currentRoom.max_players}</p>
-                  <p><span className="font-medium">Status:</span> {currentRoom.status}</p>
-                  <p><span className="font-medium">Created:</span> {new Date(currentRoom.created_at).toLocaleDateString()}</p>
+                <h2 className="text-xl font-semibold text-white mb-4">Room Info</h2>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-200">Code:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-mono bg-white/10 px-2 py-1 rounded">{currentRoom.room_code}</span>
+                      <button
+                        onClick={() => navigator.clipboard?.writeText(currentRoom.room_code)}
+                        className="text-blue-400 hover:text-blue-300 text-sm"
+                        title="Copy to clipboard"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-200">Max Players:</span>
+                    <span className="text-white">{currentRoom.max_players}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-200">Status:</span>
+                    <span className={`px-2 py-1 rounded text-sm font-medium ${
+                      currentRoom.status === 'waiting' ? 'bg-yellow-600 text-yellow-100' :
+                      currentRoom.status === 'playing' ? 'bg-green-600 text-green-100' :
+                      'bg-gray-600 text-gray-100'
+                    }`}>
+                      {currentRoom.status === 'waiting' ? 'Waiting' : 
+                       currentRoom.status === 'playing' ? 'Playing' : 'Unknown'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-200">Created:</span>
+                    <span className="text-white text-sm">
+                      {new Date(currentRoom.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {currentRoom.host_id === user.id && (
                 <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Host Controls</h3>
-                  <button
-                    onClick={startGame}
-                    disabled={roomPlayers.length < 5 || loading}
-                    className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors mb-3"
-                  >
-                    {loading ? 'Starting...' : `🎮 Start Game (${roomPlayers.length}/5+ required)`}
-                  </button>
-                  <div className="text-blue-200 text-xs text-center mb-3">
-                    Starts game with voice narration for role assignments
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    👑 Host Controls
+                  </h3>
+                  <div className="space-y-3">
+                    <button
+                      onClick={startGame}
+                      disabled={roomPlayers.length < 5 || loading}
+                      className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    >
+                      {loading ? (
+                        <>⏳ Starting...</>
+                      ) : roomPlayers.length < 5 ? (
+                        <>⚠️ Need {5 - roomPlayers.length} more players</>
+                      ) : (
+                        <>🚀 Start Game ({roomPlayers.length} players)</>
+                      )}
+                    </button>
+                    <div className="text-blue-200 text-xs text-center">
+                      Starts game with voice narration for role assignments
+                    </div>
                   </div>
                   <Link
                     to="/voice-agent"

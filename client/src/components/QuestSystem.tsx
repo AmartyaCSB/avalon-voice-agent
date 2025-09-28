@@ -23,7 +23,7 @@ interface QuestSystemProps {
 
 const QuestSystem: React.FC<QuestSystemProps> = ({ roomCode, players, currentLeader, assignments }) => {
   const { user } = useAuth()
-  const { sendMessage, currentRoom } = useLobby()
+  const { sendMessage, currentRoom, saveGameState, loadGameState, saveRoleAssignments, loadRoleAssignments } = useLobby()
   const [quests, setQuests] = useState<Quest[]>([])
   const [currentQuest, setCurrentQuest] = useState(0)
   const [selectedTeam, setSelectedTeam] = useState<string[]>([])
@@ -34,6 +34,7 @@ const QuestSystem: React.FC<QuestSystemProps> = ({ roomCode, players, currentLea
   const [missionVotes, setMissionVotes] = useState<{ [playerId: string]: 'success' | 'fail' }>({})
   const [userRole, setUserRole] = useState<string>('')
   const [userTeam, setUserTeam] = useState<'Good' | 'Evil'>('Good')
+  const [leaderIndex, setLeaderIndex] = useState(0)
 
   // Initialize quests based on player count
   useEffect(() => {
@@ -50,6 +51,46 @@ const QuestSystem: React.FC<QuestSystemProps> = ({ roomCode, players, currentLea
     setQuests(initialQuests)
   }, [players.length])
 
+  // Load game state from database
+  useEffect(() => {
+    const loadExistingGameState = async () => {
+      if (currentRoom) {
+        const gameState = await loadGameState(currentRoom.id)
+        if (gameState) {
+          setCurrentQuest(gameState.current_quest - 1) // Convert to 0-based index
+          setGamePhase(gameState.game_phase)
+          // Load other state as needed
+        }
+
+        // Save role assignments if provided
+        if (assignments && assignments.length > 0) {
+          await saveRoleAssignments(currentRoom.id, assignments)
+        } else {
+          // Load existing assignments
+          const existingAssignments = await loadRoleAssignments(currentRoom.id)
+          if (existingAssignments.length > 0) {
+            // Convert to assignments format
+            const assignmentMap = existingAssignments.reduce((acc, assignment) => {
+              const playerIndex = players.findIndex(p => p.user_id === assignment.user_id)
+              if (playerIndex !== -1) {
+                acc[playerIndex] = {
+                  role: assignment.role_name,
+                  team: assignment.team
+                }
+              }
+              return acc
+            }, {} as any)
+            
+            // Update local assignments
+            Object.assign(assignments || [], assignmentMap)
+          }
+        }
+      }
+    }
+
+    loadExistingGameState()
+  }, [currentRoom, assignments])
+
   // Detect user's role and team
   useEffect(() => {
     if (assignments && user) {
@@ -60,6 +101,22 @@ const QuestSystem: React.FC<QuestSystemProps> = ({ roomCode, players, currentLea
       }
     }
   }, [assignments, user, players])
+
+  // Save game state whenever it changes
+  useEffect(() => {
+    const saveCurrentGameState = async () => {
+      if (currentRoom) {
+        await saveGameState({
+          current_quest: currentQuest + 1, // Convert to 1-based
+          game_phase: gamePhase,
+          good_wins: quests.filter(q => q.result === 'success').length,
+          evil_wins: quests.filter(q => q.result === 'fail').length
+        })
+      }
+    }
+
+    saveCurrentGameState()
+  }, [currentQuest, gamePhase, quests])
 
   const getQuestRequirements = (playerCount: number) => {
     const requirements: { [key: number]: { players: number, fails: number }[] } = {
@@ -171,6 +228,8 @@ const QuestSystem: React.FC<QuestSystemProps> = ({ roomCode, players, currentLea
         setGamePhase('team_selection')
         setSelectedTeam([])
         setTeamVotes({})
+        // Rotate leader
+        setLeaderIndex(prev => (prev + 1) % players.length)
         sendMessage(`❌ Team rejected. Leader selects a new team. (Attempt ${voteCount + 2}/${maxVotes})`, 'system')
       }
     }
