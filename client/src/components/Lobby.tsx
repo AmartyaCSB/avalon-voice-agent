@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLobby } from '../contexts/LobbyContext'
 import { GameRoom } from '../lib/supabase'
 import QuestSystem from './QuestSystem'
+import CircularGameRoom from './CircularGameRoom'
 
 const Lobby: React.FC = () => {
   const { user, signInWithGoogle, signOut } = useAuth()
@@ -152,41 +153,33 @@ const Lobby: React.FC = () => {
     )
   }
 
+  // Show circular room layout when in a room
   if (currentRoom) {
+    if (currentRoom.status === 'playing') {
+      return (
+        <QuestSystem 
+          roomCode={currentRoom.room_code}
+          players={roomPlayers}
+          currentLeader={roomPlayers[0]?.user_id || ''}
+          assignments={gameAssignments}
+        />
+      )
+    }
+    
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-white">{currentRoom.room_name}</h1>
-              <p className="text-blue-200">Room Code: <span className="font-mono text-yellow-300">{currentRoom.room_code}</span></p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handleLeaveRoom}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Leave Room
-              </button>
-              <button
-                onClick={signOut}
-                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
+      <CircularGameRoom
+        roomCode={currentRoom.room_code}
+        players={roomPlayers}
+        isHost={currentRoom.host_id === user.id}
+      />
+    )
+  }
 
-          {/* Game Content */}
-          {currentRoom.status === 'playing' ? (
-            <QuestSystem 
-              roomCode={currentRoom.room_code}
-              players={roomPlayers}
-              currentLeader={roomPlayers[0]?.user_id || ''}
-              assignments={gameAssignments}
-            />
-          ) : (
+  // Show main lobby if not in a room
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
+      <div className="max-w-6xl mx-auto">
+        {false && (
             /* Enhanced Lobby Layout */
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
             {/* Players List - Enhanced */}

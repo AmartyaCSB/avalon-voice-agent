@@ -440,6 +440,7 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Load chat messages for a room
   const loadChatMessages = async (roomId: string) => {
     try {
+      console.log('Loading chat messages for room:', roomId)
       const { data: messages, error } = await supabase
         .from('chat_messages')
         .select(`
@@ -453,10 +454,31 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .order('created_at', { ascending: true })
         .limit(100)
 
-      if (error) throw error
+      if (error) {
+        console.error('Chat loading error:', error)
+        throw error
+      }
+      
+      console.log('Loaded chat messages:', messages)
       setChatMessages(messages || [])
     } catch (error) {
       console.error('Error loading chat messages:', error)
+      // Try to load without the users join to debug
+      try {
+        const { data: simpleMessages, error: simpleError } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('room_id', roomId)
+          .order('created_at', { ascending: true })
+          .limit(100)
+        
+        if (!simpleError) {
+          console.log('Simple messages loaded:', simpleMessages)
+          setChatMessages(simpleMessages || [])
+        }
+      } catch (fallbackError) {
+        console.error('Fallback chat loading failed:', fallbackError)
+      }
     }
   }
 
