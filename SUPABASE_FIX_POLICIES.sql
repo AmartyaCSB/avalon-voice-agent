@@ -13,7 +13,8 @@ CREATE POLICY "player_profiles_policy" ON public.player_profiles
 
 -- 3. Make sure the users table has the right policies
 DROP POLICY IF EXISTS "Users can create own profile" ON public.users;
-CREATE POLICY IF NOT EXISTS "users_can_insert" ON public.users
+DROP POLICY IF EXISTS "users_can_insert" ON public.users;
+CREATE POLICY "users_can_insert" ON public.users
     FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- 4. Ensure the trigger exists for new user creation

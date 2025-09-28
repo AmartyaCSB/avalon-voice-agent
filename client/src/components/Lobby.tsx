@@ -17,7 +17,9 @@ const Lobby: React.FC = () => {
     leaveRoom, 
     refreshRooms,
     sendMessage,
-    loadChatMessages
+    loadChatMessages,
+    startGame,
+    kickPlayer
   } = useLobby()
   
   const [showCreateRoom, setShowCreateRoom] = useState(false)
@@ -148,14 +150,31 @@ const Lobby: React.FC = () => {
                       <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                         {player.player_profiles?.persona_name?.charAt(0) || '?'}
                       </div>
-                      <div>
-                        <p className="text-white font-medium text-sm">
-                          {player.player_profiles?.persona_name || 'Unknown Player'}
-                        </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-white font-medium text-sm">
+                            {player.player_profiles?.persona_name || 'Unknown Player'}
+                          </p>
+                          {currentRoom.host_id === player.user_id && (
+                            <span className="bg-yellow-600 text-yellow-100 text-xs px-1 py-0.5 rounded">
+                              HOST
+                            </span>
+                          )}
+                        </div>
                         <p className="text-blue-200 text-xs">
                           {player.player_profiles?.preferred_role || 'No preference'}
                         </p>
                       </div>
+                      {/* Kick button for host (can't kick themselves) */}
+                      {currentRoom.host_id === user.id && player.user_id !== user.id && (
+                        <button
+                          onClick={() => kickPlayer(player.user_id)}
+                          className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition-colors"
+                          title="Remove player"
+                        >
+                          👢
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -226,17 +245,21 @@ const Lobby: React.FC = () => {
                 <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6">
                   <h3 className="text-lg font-semibold text-white mb-4">Host Controls</h3>
                   <button
-                    disabled={roomPlayers.length < 5}
+                    onClick={startGame}
+                    disabled={roomPlayers.length < 5 || loading}
                     className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors mb-3"
                   >
-                    Start Game ({roomPlayers.length}/5+ required)
+                    {loading ? 'Starting...' : `🎮 Start Game (${roomPlayers.length}/5+ required)`}
                   </button>
-                  <button
-                    onClick={() => {/* TODO: Implement voice agent integration */}}
-                    className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                  <div className="text-blue-200 text-xs text-center mb-3">
+                    Starts game with voice narration for role assignments
+                  </div>
+                  <Link
+                    to="/voice-agent"
+                    className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors block text-center"
                   >
-                    🎤 Voice Narration
-                  </button>
+                    🎤 Practice Voice Narration
+                  </Link>
                 </div>
               )}
 

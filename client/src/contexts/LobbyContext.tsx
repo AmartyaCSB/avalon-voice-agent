@@ -32,6 +32,8 @@ interface LobbyContextType {
   refreshRooms: () => Promise<void>
   sendMessage: (message: string, messageType?: 'general' | 'team' | 'system' | 'whisper', targetUserId?: string) => Promise<void>
   loadChatMessages: (roomId: string) => Promise<void>
+  startGame: () => Promise<boolean>
+  kickPlayer: (playerId: string) => Promise<boolean>
 }
 
 const LobbyContext = createContext<LobbyContextType | undefined>(undefined)
@@ -300,13 +302,42 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }
 
-  // Load data on mount
+  // Load data on mount and check for existing room
   useEffect(() => {
     if (user) {
       loadPlayerProfiles()
       refreshRooms()
+      checkExistingRoom()
     }
   }, [user])
+
+  // Check if user is already in a room (for page refresh persistence)
+  const checkExistingRoom = async () => {
+    if (!user) return
+
+    try {
+      const { data: existingRoomPlayer } = await supabase
+        .from('room_players')
+        .select(`
+          *,
+          game_rooms (*)
+        `)
+        .eq('user_id', user.id)
+        .single()
+
+      if (existingRoomPlayer && existingRoomPlayer.game_rooms) {
+        const room = existingRoomPlayer.game_rooms as GameRoom
+        if (room.status === 'waiting' || room.status === 'playing') {
+          setCurrentRoom(room)
+          await loadRoomPlayers(room.id)
+          await loadChatMessages(room.id)
+        }
+      }
+    } catch (error) {
+      // No existing room found, which is fine
+      console.log('No existing room found for user')
+    }
+  }
 
   // Set up real-time subscriptions
   useEffect(() => {
@@ -460,6 +491,69 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [currentRoom])
 
+  // Start the game (host only)
+  const startGame = async (): Promise<boolean> => {
+    if (!user || !currentRoom || currentRoom.host_id !== user.id) {
+      console.error('Only the host can start the game')
+      return false
+    }
+
+    if (roomPlayers.length < 5) {
+      alert('Need at least 5 players to start the game')
+      return false
+    }
+
+    try {
+      // Update room status to playing
+      const { error: updateError } = await supabase
+        .from('game_rooms')
+        .update({ status: 'playing' })
+        .eq('id', currentRoom.id)
+
+      if (updateError) throw updateError
+
+      // Send system message
+      await sendMessage(`🎮 Game started! ${roomPlayers.length} players ready.`, 'system')
+
+      // Navigate to voice agent for role assignment
+      window.location.href = `/voice-agent?room=${currentRoom.room_code}&players=${roomPlayers.length}`
+
+      return true
+    } catch (error) {
+      console.error('Error starting game:', error)
+      return false
+    }
+  }
+
+  // Kick a player (host only)
+  const kickPlayer = async (playerId: string): Promise<boolean> => {
+    if (!user || !currentRoom || currentRoom.host_id !== user.id) {
+      console.error('Only the host can kick players')
+      return false
+    }
+
+    try {
+      const { error } = await supabase
+        .from('room_players')
+        .delete()
+        .eq('room_id', currentRoom.id)
+        .eq('user_id', playerId)
+
+      if (error) throw error
+
+      // Send system message
+      const kickedPlayer = roomPlayers.find(p => p.user_id === playerId)
+      if (kickedPlayer) {
+        await sendMessage(`👢 ${kickedPlayer.player_profiles?.persona_name || 'Player'} was removed from the room.`, 'system')
+      }
+
+      return true
+    } catch (error) {
+      console.error('Error kicking player:', error)
+      return false
+    }
+  }
+
   // Load user's player profiles on mount
   useEffect(() => {
     if (user) {
@@ -481,7 +575,9 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updatePlayerProfile,
     refreshRooms,
     sendMessage,
-    loadChatMessages
+    loadChatMessages,
+    startGame,
+    kickPlayer
   }
 
   return (

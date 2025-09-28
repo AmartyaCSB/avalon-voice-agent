@@ -20,8 +20,13 @@ interface AvalonVoiceAgentProps {
 }
 
 export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
-  const [players, setPlayers] = useState(7);
-  const [playersInput, setPlayersInput] = useState("7");
+  // Check URL parameters for room integration
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomCode = urlParams.get('room');
+  const roomPlayers = urlParams.get('players');
+  
+  const [players, setPlayers] = useState(roomPlayers ? parseInt(roomPlayers) : 7);
+  const [playersInput, setPlayersInput] = useState(roomPlayers || "7");
   const [roles, setRoles] = useState<RolesToggle>(defaultRoles);
   const [assignments, setAssignments] = useState<Assignment[] | null>(null);
   const [narration, setNarration] = useState<{steps:string[], notes:string[]} | null>(null);
@@ -256,6 +261,26 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
       fontFamily: 'Arial, sans-serif'
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+
+        {/* Room Integration Banner */}
+        {roomCode && (
+          <div style={{
+            background: 'rgba(34, 197, 94, 0.2)',
+            border: '1px solid #22c55e',
+            borderRadius: '8px',
+            padding: '1rem',
+            marginBottom: '2rem',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🎮</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+              Room: {roomCode} | {roomPlayers} Players
+            </div>
+            <div style={{ opacity: 0.9 }}>
+              Assign roles for your lobby game! Roles will be revealed to each player.
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
