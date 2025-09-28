@@ -84,6 +84,12 @@ export interface ChatMessage {
   room_id: string
   user_id: string
   message: string
-  message_type: 'general' | 'team' | 'system'
+  message_type: 'general' | 'team' | 'system' | 'whisper'
+  target_user_id?: string
+  is_deleted?: boolean
   created_at: string
+  users?: {
+    display_name: string
+    avatar_url?: string
+  }
 }

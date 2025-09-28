@@ -450,7 +450,6 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           )
         `)
         .eq('room_id', roomId)
-        .eq('is_deleted', false)
         .order('created_at', { ascending: true })
         .limit(100)
 
