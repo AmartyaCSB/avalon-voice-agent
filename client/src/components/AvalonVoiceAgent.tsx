@@ -69,7 +69,7 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
 
   function generateNarrationSteps(assignments: any[], roleConfig: any) {
     const steps = [
-      "Welcome to Avalon! The fate of Camelot rests in your hands.",
+      "Welcome to Avalon! The fate of the kingdom rests in your hands.",
       "Close your eyes and listen carefully to your role assignment."
     ];
 

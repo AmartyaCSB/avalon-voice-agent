@@ -91,7 +91,7 @@ const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, 
               </div>
               <div>
                 <h1 className="text-2xl font-bold">Room: {roomCode}</h1>
-                <p className="text-amber-200">The Round Table of Camelot</p>
+                <p className="text-amber-200">The Round Table of Avalon</p>
               </div>
             </div>
             <div className="flex gap-2">
