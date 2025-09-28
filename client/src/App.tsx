@@ -1,16 +1,17 @@
 import React, { useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import AvalonVoiceAgent from './components/AvalonVoiceAgent'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { LobbyProvider } from './contexts/LobbyContext'
 import PlayerProfile from './components/PlayerProfile'
 import Lobby from './components/Lobby'
+import AuthCallback from './components/AuthCallback'
 import './styles.css'
 
-function AppContent() {
-  const { user, signInWithGoogle, signOut, loading } = useAuth()
-  const [showLobby, setShowLobby] = useState(false)
-  const [showVoiceAgent, setShowVoiceAgent] = useState(false)
-  const [showProfile, setShowProfile] = useState(false)
+// Landing Page Component
+function LandingPage() {
+  const { user, signInWithGoogle } = useAuth()
+  const navigate = useNavigate()
 
   const handleGoogleSignIn = async () => {
     try {
@@ -21,182 +22,31 @@ function AppContent() {
     }
   }
 
-  const handleEnterLobby = () => {
-    setShowLobby(true)
-  }
-
-  if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        fontFamily: 'Arial, sans-serif'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚔️</div>
-          <p>Loading Avalon...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (showVoiceAgent) {
-    return <AvalonVoiceAgent onBack={() => setShowVoiceAgent(false)} />
-  }
-
-  if (showProfile) {
-    return <PlayerProfile onBack={() => setShowProfile(false)} />
-  }
-
-  if (showLobby) {
-    return <Lobby onBack={() => setShowLobby(false)} />
-  }
-
   if (user) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        fontFamily: 'Arial, sans-serif',
-        padding: '2rem'
-      }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          {/* Header with user info */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
-            <div>
-              <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Welcome back, {user.user_metadata?.full_name || user.email}! 👋</h1>
-              <p style={{ opacity: 0.9 }}>Ready to play Avalon?</p>
-            </div>
-            <button
-              onClick={signOut}
-              style={{
-                background: '#6b7280',
-                color: 'white',
-                border: 'none',
-                padding: '0.75rem 1.5rem',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '1rem'
-              }}
-            >
-              Sign Out
-            </button>
-          </div>
-
-          {/* Main actions */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '3rem' }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.1)',
-              padding: '2rem',
-              borderRadius: '12px',
-              backdropFilter: 'blur(10px)',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🎮 Game Lobby</h3>
-              <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>Create or join multiplayer games</p>
-              <button
-                onClick={handleEnterLobby}
-                style={{
-                  background: '#16a34a',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 2rem',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  width: '100%'
-                }}
-              >
-                Enter Lobby
-              </button>
-            </div>
-
-            <div style={{
-              background: 'rgba(255,255,255,0.1)',
-              padding: '2rem',
-              borderRadius: '12px',
-              backdropFilter: 'blur(10px)',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>👤 My Profiles</h3>
-              <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>Manage your player personas</p>
-              <button
-                onClick={() => setShowProfile(true)}
-                style={{
-                  background: '#9333ea',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 2rem',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  width: '100%'
-                }}
-              >
-                Manage Profiles
-              </button>
-            </div>
-
-            <div style={{
-              background: 'rgba(255,255,255,0.1)',
-              padding: '2rem',
-              borderRadius: '12px',
-              backdropFilter: 'blur(10px)',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🎤 Voice Narration</h3>
-              <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>AI-powered game narration</p>
-              <button
-                onClick={() => setShowVoiceAgent(true)}
-                style={{
-                  background: '#dc2626',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 2rem',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  width: '100%'
-                }}
-              >
-                Voice Agent
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <Navigate to="/dashboard" replace />
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
+    <div style={{
+      minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       color: 'white',
       fontFamily: 'Arial, sans-serif'
     }}>
       {/* Hero Section */}
       <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-            <h1 style={{ fontSize: '4rem', marginBottom: '1rem', background: 'linear-gradient(45deg, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              ⚔️ Avalon - The Resistance
-            </h1>
-            <p style={{ fontSize: '1rem', marginBottom: '1rem', opacity: 0.7, fontStyle: 'italic' }}>
-              🚀 Live on aeonic.earth - Auto-deployed from GitHub!
-            </p>
+        <h1 style={{ fontSize: '4rem', marginBottom: '1rem', background: 'linear-gradient(45deg, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          ⚔️ Avalon - The Resistance
+        </h1>
+        <p style={{ fontSize: '1rem', marginBottom: '1rem', opacity: 0.7, fontStyle: 'italic' }}>
+          🚀 Live on aeonic.earth - Auto-deployed from GitHub!
+        </p>
         <p style={{ fontSize: '1.3rem', marginBottom: '2rem', opacity: 0.9, maxWidth: '700px', margin: '0 auto 2rem' }}>
           Join the loyal servants of Arthur or embrace the darkness as a minion of Mordred. The ultimate social deduction game of trust, betrayal, and hidden identities.
         </p>
-        
+
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
+          <button
             onClick={handleGoogleSignIn}
             style={{
               background: 'white',
@@ -219,10 +69,10 @@ function AppContent() {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
             Play Online Multiplayer
-            </button>
+          </button>
 
-                    <button
-            onClick={() => setShowVoiceAgent(true)}
+          <button
+            onClick={() => navigate('/voice-agent')}
             style={{
               background: 'rgba(255,255,255,0.1)',
               color: 'white',
@@ -237,14 +87,14 @@ function AppContent() {
           >
             🎤 Try Voice Narration
           </button>
-                  </div>
-                </div>
+        </div>
+      </div>
 
       {/* Features Section */}
       <div style={{ padding: '4rem 2rem' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: '3rem' }}>How to Play Avalon</h2>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '4rem' }}>
             <div style={{ background: 'rgba(255,255,255,0.1)', padding: '2rem', borderRadius: '12px', textAlign: 'center', backdropFilter: 'blur(10px)' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👑</div>
@@ -291,7 +141,7 @@ function AppContent() {
               <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', textAlign: 'center' }}>🎤 AI Voice Narration</h3>
               <p style={{ opacity: 0.9, marginBottom: '1.5rem', textAlign: 'center' }}>Generate role assignments and immersive AI-powered voice narration for in-person games.</p>
               <button
-                onClick={() => setShowVoiceAgent(true)}
+                onClick={() => navigate('/voice-agent')}
                 style={{
                   background: '#dc2626',
                   color: 'white',
@@ -321,13 +171,214 @@ function AppContent() {
   )
 }
 
+// Dashboard Component (for logged-in users)
+function Dashboard() {
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
+
+  if (!user) {
+    return <Navigate to="/" replace />
+  }
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: 'white',
+      fontFamily: 'Arial, sans-serif',
+      padding: '2rem'
+    }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Header with user info */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
+          <div>
+            <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Welcome back, {user.user_metadata?.full_name || user.email}! 👋</h1>
+            <p style={{ opacity: 0.9 }}>Ready to play Avalon?</p>
+          </div>
+          <button
+            onClick={signOut}
+            style={{
+              background: '#6b7280',
+              color: 'white',
+              border: 'none',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '1rem'
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
+
+        {/* Main actions */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '3rem' }}>
+          <div style={{
+            background: 'rgba(255,255,255,0.1)',
+            padding: '2rem',
+            borderRadius: '12px',
+            backdropFilter: 'blur(10px)',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🎮 Game Lobby</h3>
+            <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>Create or join multiplayer games</p>
+            <button
+              onClick={() => navigate('/lobby')}
+              style={{
+                background: '#16a34a',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 2rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: '600',
+                width: '100%'
+              }}
+            >
+              Enter Lobby
+            </button>
+          </div>
+
+          <div style={{
+            background: 'rgba(255,255,255,0.1)',
+            padding: '2rem',
+            borderRadius: '12px',
+            backdropFilter: 'blur(10px)',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>👤 My Profiles</h3>
+            <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>Manage your player personas</p>
+            <button
+              onClick={() => navigate('/profiles')}
+              style={{
+                background: '#9333ea',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 2rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: '600',
+                width: '100%'
+              }}
+            >
+              Manage Profiles
+            </button>
+          </div>
+
+          <div style={{
+            background: 'rgba(255,255,255,0.1)',
+            padding: '2rem',
+            borderRadius: '12px',
+            backdropFilter: 'blur(10px)',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🎤 Voice Narration</h3>
+            <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>AI-powered game narration</p>
+            <button
+              onClick={() => navigate('/voice-agent')}
+              style={{
+                background: '#dc2626',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 2rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: '600',
+                width: '100%'
+              }}
+            >
+              Voice Agent
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Loading Component
+function LoadingScreen() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white',
+      fontFamily: 'Arial, sans-serif'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚔️</div>
+        <p>Loading Avalon...</p>
+      </div>
+    </div>
+  )
+}
+
+// Protected Route Component
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+  
+  if (loading) {
+    return <LoadingScreen />
+  }
+  
+  if (!user) {
+    return <Navigate to="/" replace />
+  }
+  
+  return <>{children}</>
+}
+
+// Main App Component with Routing
+function AppContent() {
+  const { loading } = useAuth()
+  
+  if (loading) {
+    return <LoadingScreen />
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/voice-agent" element={<AvalonVoiceAgent onBack={() => window.history.back()} />} />
+      
+      {/* Protected Routes */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/lobby" element={
+        <ProtectedRoute>
+          <Lobby onBack={() => window.history.back()} />
+        </ProtectedRoute>
+      } />
+      <Route path="/profiles" element={
+        <ProtectedRoute>
+          <PlayerProfile onBack={() => window.history.back()} />
+        </ProtectedRoute>
+      } />
+      
+      {/* Catch all route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
 function App() {
   return (
-    <AuthProvider>
-      <LobbyProvider>
-        <AppContent />
-      </LobbyProvider>
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <LobbyProvider>
+          <AppContent />
+        </LobbyProvider>
+      </AuthProvider>
+    </Router>
   )
 }
 
