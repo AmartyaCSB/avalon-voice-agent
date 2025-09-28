@@ -60,13 +60,29 @@ const Lobby: React.FC = () => {
   }, [currentRoom])
 
   const handleCreateRoom = async () => {
-    if (roomName.trim()) {
-      const success = await createRoom(roomName, maxPlayers)
-      if (success) {
+    if (!roomName.trim()) {
+      alert('Please enter a room name')
+      return
+    }
+
+    try {
+      console.log('Creating room:', roomName, 'Max players:', maxPlayers)
+      const room = await createRoom(roomName, maxPlayers)
+      
+      if (room) {
+        console.log('Room created successfully:', room)
         setShowCreateRoom(false)
         setRoomName('')
         setMaxPlayers(10)
+        // Navigate to the new room
+        navigate(`/room/${room.room_code}`)
+      } else {
+        console.error('Failed to create room - returned null')
+        alert('Failed to create room. Please try again.')
       }
+    } catch (error) {
+      console.error('Error creating room:', error)
+      alert('Error creating room. Please try again.')
     }
   }
 
@@ -208,8 +224,12 @@ const Lobby: React.FC = () => {
                       type="text"
                       placeholder="Room Name"
                       value={roomName}
-                      onChange={(e) => setRoomName(e.target.value)}
-                      className="w-full bg-white/10 text-white placeholder-blue-200 border border-white/20 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        console.log('Room name changed:', e.target.value)
+                        setRoomName(e.target.value)
+                      }}
+                      disabled={loading}
+                      className="w-full bg-white/10 text-white placeholder-blue-200 border border-white/20 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                     />
                     <input
                       type="number"
