@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useLobby } from '../contexts/LobbyContext'
 import { PlayerProfile } from '../lib/supabase'
+import DebugConsole from './DebugConsole'
 
 const PlayerProfileComponent: React.FC = () => {
   const { user } = useAuth()
@@ -269,6 +270,7 @@ const PlayerProfileComponent: React.FC = () => {
           </div>
         )}
       </div>
+      <DebugConsole />
     </div>
   )
 }

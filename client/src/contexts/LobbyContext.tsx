@@ -467,23 +467,6 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [user])
 
-  const loadPlayerProfiles = async () => {
-    if (!user) return
-
-    try {
-      const { data: profiles, error } = await supabase
-        .from('player_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setPlayerProfiles(profiles || [])
-    } catch (error) {
-      console.error('Error loading player profiles:', error)
-    }
-  }
-
   const value = {
     rooms,
     currentRoom,
