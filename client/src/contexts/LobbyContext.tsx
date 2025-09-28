@@ -478,25 +478,37 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .from('chat_messages')
         .select(`
           *,
-          users (
+          users!chat_messages_user_id_fkey (
             display_name,
             avatar_url
           )
         `)
         .eq('room_id', roomId)
+        .eq('is_deleted', false)
         .order('created_at', { ascending: true })
         .limit(100)
 
       if (error) {
         console.error('Chat loading error:', error)
-        throw error
+        // Fallback: try without user join
+        const { data: fallbackMessages, error: fallbackError } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('room_id', roomId)
+          .eq('is_deleted', false)
+          .order('created_at', { ascending: true })
+          .limit(100)
+        
+        if (fallbackError) throw fallbackError
+        console.log('Loaded chat messages (fallback):', fallbackMessages)
+        setChatMessages(fallbackMessages || [])
+        return
       }
       
       console.log('Loaded chat messages:', messages)
       setChatMessages(messages || [])
     } catch (error) {
       console.error('Error loading chat messages:', error)
-      // Try to load without the users join to debug
       try {
         const { data: simpleMessages, error: simpleError } = await supabase
           .from('chat_messages')
