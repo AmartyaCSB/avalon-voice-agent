@@ -192,27 +192,40 @@ export const LobbyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     personaDescription: string, 
     preferredRole?: 'good' | 'evil'
   ): Promise<PlayerProfile | null> => {
-    if (!user) return null
+    if (!user) {
+      console.error('No user found for profile creation')
+      return null
+    }
+
+    console.log('Creating profile for user:', user.id, 'with data:', { personaName, personaDescription, preferredRole })
 
     try {
+      const profileData = {
+        user_id: user.id,
+        persona_name: personaName,
+        persona_description: personaDescription,
+        preferred_role: preferredRole,
+        game_stats: {
+          wins: 0,
+          losses: 0,
+          games_played: 0
+        }
+      }
+
+      console.log('Inserting profile data:', profileData)
+
       const { data: profile, error } = await supabase
         .from('player_profiles')
-        .insert({
-          user_id: user.id,
-          persona_name: personaName,
-          persona_description: personaDescription,
-          preferred_role: preferredRole,
-          game_stats: {
-            wins: 0,
-            losses: 0,
-            games_played: 0
-          }
-        })
+        .insert(profileData)
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error creating profile:', error)
+        throw error
+      }
 
+      console.log('Profile created successfully:', profile)
       setPlayerProfiles(prev => [...prev, profile])
       return profile
     } catch (error) {

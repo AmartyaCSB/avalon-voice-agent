@@ -49,28 +49,8 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
   }, []);
 
   async function handleAssign() {
-    try {
-      const res = await getAssignments(players, roles);
-      setAssignments(res.assignments);
-
-      setLoadingNarration(true);
-      try {
-        const nar = await getNarration(players, roles);
-        setNarration(nar);
-      } finally {
-        setLoadingNarration(false);
-      }
-
-      setSummary(buildSummary(players, roles));
-    } catch (error) {
-      console.error('Server not available, using local assignment:', error);
-      
-      // Generate roles locally without server
-      generateLocalAssignment();
-      
-      // Show simple message
-      console.log('🎲 Roles generated successfully!');
-    }
+    // Always use local assignment (no server dependency)
+    generateLocalAssignment();
   }
 
   function generateLocalAssignment() {
@@ -79,16 +59,49 @@ export default function AvalonVoiceAgent({ onBack }: AvalonVoiceAgentProps) {
     setAssignments(assignments);
     setSummary(buildSummary(players, roles));
     
-    // Set simple narration
+    // Generate proper narration based on roles
+    const narrationSteps = generateNarrationSteps(assignments, roles);
     setNarration({
-      steps: [
-        "Welcome to Avalon!",
-        "Roles have been assigned.",
-        "Each player should click to see their role.",
-        "Good luck saving Camelot!"
-      ],
-      notes: ["Click 'Narrate Setup' to hear the role reveals"]
+      steps: narrationSteps,
+      notes: ["Click 'Narrate Setup' to hear the role reveals with voice"]
     });
+  }
+
+  function generateNarrationSteps(assignments: any[], roleConfig: any) {
+    const steps = [
+      "Welcome to Avalon! The fate of Camelot rests in your hands.",
+      "Close your eyes and listen carefully to your role assignment."
+    ];
+
+    // Add role-specific instructions
+    const hasSpecialRoles = roleConfig.Merlin || roleConfig.Percival || roleConfig.Morgana || roleConfig.Mordred;
+    
+    if (hasSpecialRoles) {
+      steps.push("Special roles have been distributed among you.");
+      
+      if (roleConfig.Merlin) {
+        steps.push("Merlin, you know the forces of evil, but they must not discover your identity.");
+      }
+      
+      if (roleConfig.Percival) {
+        steps.push("Percival, you must find and protect Merlin, but beware of Morgana's deception.");
+      }
+      
+      if (roleConfig.Morgana) {
+        steps.push("Morgana, you appear as Merlin to Percival. Use this to sow confusion among the good.");
+      }
+      
+      if (roleConfig.Mordred) {
+        steps.push("Mordred, you are hidden from Merlin's sight. Use this advantage wisely.");
+      }
+    }
+
+    steps.push("Each player will now see their individual role assignment.");
+    steps.push("Good servants of Arthur, work together to complete three quests.");
+    steps.push("Minions of Mordred, sabotage the quests and remain hidden.");
+    steps.push("The game begins now. May the best side prevail!");
+
+    return steps;
   }
 
   function getLocalAssignments(playerCount: number, roleConfig: any) {

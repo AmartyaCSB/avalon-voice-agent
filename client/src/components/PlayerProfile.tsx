@@ -20,17 +20,32 @@ const PlayerProfileComponent: React.FC = () => {
 
   const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.personaName.trim()) return
+    console.log('Creating profile with data:', formData)
+    
+    if (!formData.personaName.trim()) {
+      alert('Please enter a persona name')
+      return
+    }
 
-    const profile = await createPlayerProfile(
-      formData.personaName,
-      formData.personaDescription,
-      formData.preferredRole
-    )
+    try {
+      const profile = await createPlayerProfile(
+        formData.personaName,
+        formData.personaDescription,
+        formData.preferredRole
+      )
 
-    if (profile) {
-      setFormData({ personaName: '', personaDescription: '', preferredRole: 'good' })
-      setShowCreateForm(false)
+      if (profile) {
+        console.log('Profile created successfully:', profile)
+        setFormData({ personaName: '', personaDescription: '', preferredRole: 'good' })
+        setShowCreateForm(false)
+        alert('Profile created successfully!')
+      } else {
+        console.error('Profile creation failed - no profile returned')
+        alert('Failed to create profile. Please check your connection and try again.')
+      }
+    } catch (error) {
+      console.error('Error in profile creation:', error)
+      alert('Error creating profile. Please try again.')
     }
   }
 
