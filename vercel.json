@@ -3,11 +3,23 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/dashboard",
+      "destination": "/index.html"
+    },
+    {
       "source": "/room/(.*)",
       "destination": "/index.html"
     },
     {
-      "source": "/(.*)",
+      "source": "/profile",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/voice-agent",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/((?!api|_next|_static|favicon.ico).*)",
       "destination": "/index.html"
     }
   ]

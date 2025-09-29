@@ -224,21 +224,6 @@ const Lobby: React.FC = () => {
                   </button>
                 ) : (
                   <div className="space-y-4">
-                    {/* Debug info */}
-                    <div className="text-xs text-blue-300 bg-black/20 p-2 rounded flex justify-between items-center">
-                      <span>Debug: loading={loading.toString()}, roomName="{roomName}"</span>
-                      {loading && (
-                        <button 
-                          onClick={() => {
-                            console.log('Force resetting loading state')
-                            window.location.reload()
-                          }}
-                          className="bg-red-500 text-white px-2 py-1 rounded text-xs"
-                        >
-                          Reset Loading
-                        </button>
-                      )}
-                    </div>
                     <input
                       type="text"
                       placeholder="Room Name"
