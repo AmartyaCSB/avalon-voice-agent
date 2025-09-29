@@ -11,7 +11,7 @@ interface CircularGameRoomProps {
 
 const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, isHost }) => {
   const { user } = useAuth()
-  const { currentRoom, sendMessage, chatMessages, startGame, loading } = useLobby()
+  const { currentRoom, sendMessage, chatMessages, startGame, leaveRoom, loading } = useLobby()
   const [chatInput, setChatInput] = useState('')
   const [showChat, setShowChat] = useState(false)
   const [isStartingGame, setIsStartingGame] = useState(false)
@@ -71,6 +71,19 @@ const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, 
     }
   }
 
+  const handleLeaveRoom = async () => {
+    if (confirm('Are you sure you want to leave this room?')) {
+      try {
+        await leaveRoom()
+        // Navigate back to lobby
+        window.location.href = '/dashboard'
+      } catch (error) {
+        console.error('Error leaving room:', error)
+        alert('Failed to leave room. Please try again.')
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-900 via-amber-800 to-amber-900 relative overflow-hidden">
       {/* Medieval background texture */}
@@ -110,6 +123,12 @@ const CircularGameRoom: React.FC<CircularGameRoomProps> = ({ roomCode, players, 
                 className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors"
               >
                 💬 Chat {chatMessages.length > 0 && `(${chatMessages.length})`}
+              </button>
+              <button
+                onClick={handleLeaveRoom}
+                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
+              >
+                🚪 Leave Room
               </button>
             </div>
           </div>
